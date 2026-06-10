@@ -1,0 +1,82 @@
+$primary:   #1e3a8a;
+$primary-light: #3b82f6;
+$border:    #e2e8f0;
+$text-dark: #1f2937;
+$text-light:#6b7280;
+$bg-light:  #f9fafb;
+$white:     #ffffff;
+
+.page {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 0 24px;
+
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: $text-dark;
+    margin: 0 0 8px 0;
+  }
+
+  .page-subtitle {
+    font-size: 15px;
+    color: $text-light;
+    margin: 0 0 40px 0;
+  }
+}
+
+.form-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: $primary-light;
+    box-shadow: 0 2px 8px rgba($primary, 0.08);
+  }
+
+  .form-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .form-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-dark;
+    }
+
+    .form-card-desc {
+      font-size: 13px;
+      color: $text-light;
+    }
+  }
+
+  .btn-launch {
+    padding: 10px 20px;
+    background-color: $primary;
+    color: $white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: $primary-light;
+    }
+  }
+}

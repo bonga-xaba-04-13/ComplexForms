@@ -1,0 +1,22 @@
+<div class="page">
+  <h1 class="page-title">JSON-Driven Forms</h1>
+  <p class="page-subtitle">Select a form to launch</p>
+
+  <div class="form-list">
+    <div class="form-card">
+      <div class="form-card-info">
+        <span class="form-card-title">Single Patient Capture</span>
+        <span class="form-card-desc">3-step form: Personal Info, Work Details, Documents</span>
+      </div>
+      <button class="btn-launch" (click)="openSinglePatientCapture()">Launch →</button>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-info">
+        <span class="form-card-title">Married Patient Capture</span>
+        <span class="form-card-desc">Extended patient capture including spouse details</span>
+      </div>
+      <button class="btn-launch" (click)="openMarriedPatientCapture()">Launch →</button>
+    </div>
+  </div>
+</div>

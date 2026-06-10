@@ -1,0 +1,67 @@
+{
+    "controls": [
+        {
+            "name": "name",
+            "label": "Name",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "surname",
+            "label": "Surname",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "email",
+            "label": "Email",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "phoneNumber",
+            "label": "Phone Number",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "dateOfBirth",
+            "label": "Date of Birth",
+            "description": "",
+            "type": "date",
+            "validators": {}
+        },
+        {
+            "name": "Gender",
+            "label": "Gender",
+            "description": "",
+            "type": "select",
+            "validators": {}
+        },
+        {
+            "name": "address",
+            "label": "Address",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "city",
+            "label": "City",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "postalCode",
+            "label": "Postal Code",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        }
+    ]
+}

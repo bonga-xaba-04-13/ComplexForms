@@ -1,0 +1,43 @@
+<div class="container">
+  <!-- TOP PREVIEW SECTION -->
+  <div class="preview-section">
+    <div class="preview-title">Captured Data</div>
+    <div class="preview-content">
+      <div class="preview-placeholder">Complete form steps to see preview data...</div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content-wrapper">
+    <!-- LEFT NAVIGATION -->
+    <div class="nav-section">
+      <div class="nav-title">Forms</div>
+      <div class="nav-buttons">
+        @for (step of steps; track step.formUrl; let i = $index) {
+          <button class="nav-btn" [class.active]="i === currentStepIndex" (click)="loadStep(i)">
+            {{ step.formTitle }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- STEP FORM (child component renders the active step) -->
+    <app-step-form [loadedStep]="currentLoadedStep" />
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-section">
+    <div class="footer-info">
+      Step {{ currentStepIndex + 1 }} of {{ steps.length }}
+    </div>
+    <div class="footer-buttons">
+      <button class="btn-secondary" [disabled]="isFirstStep" (click)="previous()">← Previous</button>
+      @if (!isLastStep) {
+        <button class="btn-primary" (click)="next()">Next →</button>
+      } @else {
+        <button class="btn-success" (click)="onSubmit()">✓ Submit</button>
+      }
+      <button class="btn-secondary" (click)="close()">✕ Close</button>
+    </div>
+  </div>
+</div>

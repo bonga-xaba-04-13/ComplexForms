@@ -1,0 +1,74 @@
+@if (loadedStep) {
+  <div class="form-section" [formGroup]="loadedStep.formGroup">
+    <div class="form-header">
+      <h1 class="form-title">{{ loadedStep.step.formTitle }}</h1>
+      @if (loadedStep.step.formDescription) {
+        <p class="form-subtitle">{{ loadedStep.step.formDescription }}</p>
+      }
+    </div>
+
+    <div class="form-grid">
+      @for (control of loadedStep.formData.controls; track control.name) {
+        <div class="form-group" [class.full-width]="control.type === 'textarea' || control.type === 'check'">
+          <label [for]="control.name">
+            {{ control.label }}
+            @if (control.validators && control.validators['required']) { <span class="required">*</span> }
+          </label>
+
+          @switch (control.type) {
+            @case ('select') {
+              <select [id]="control.name" [formControlName]="control.name" [class.invalid]="isInvalid(control.name)">
+                <option value="">Select {{ control.label }}</option>
+                @for (opt of (control.options ?? []); track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            }
+            @case ('textarea') {
+              <textarea [id]="control.name" [formControlName]="control.name"
+                [placeholder]="control.description"
+                [class.invalid]="isInvalid(control.name)"></textarea>
+            }
+            @case ('check') {
+              <div class="checkbox-group">
+                @if (control.options && control.options.length > 0) {
+                  @for (opt of control.options; track opt.value) {
+                    <div class="checkbox-item">
+                      <input type="checkbox" [id]="control.name + '_' + opt.value" [value]="opt.value" />
+                      <label [for]="control.name + '_' + opt.value">{{ opt.label }}</label>
+                    </div>
+                  }
+                } @else {
+                  <div class="checkbox-item">
+                    <input type="checkbox" [id]="control.name" [formControlName]="control.name" />
+                    <label [for]="control.name">{{ control.label }}</label>
+                  </div>
+                }
+              </div>
+            }
+            @case ('radio') {
+              <div class="checkbox-group">
+                @for (opt of (control.options ?? []); track opt.value) {
+                  <div class="checkbox-item">
+                    <input type="radio" [id]="control.name + '_' + opt.value"
+                      [formControlName]="control.name" [value]="opt.value" />
+                    <label [for]="control.name + '_' + opt.value">{{ opt.label }}</label>
+                  </div>
+                }
+              </div>
+            }
+            @default {
+              <input [type]="control.type" [id]="control.name" [formControlName]="control.name"
+                [placeholder]="control.description"
+                [class.invalid]="isInvalid(control.name)" />
+            }
+          }
+
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

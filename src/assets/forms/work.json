@@ -1,0 +1,53 @@
+{
+    "controls": [
+        {
+            "name": "jobTitle",
+            "label": "Job Title",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "department",
+            "label": "Department",
+            "description": "",
+            "type": "select",
+            "validators": {}
+        },
+        {
+            "name": "directManager",
+            "label": "Direct Manager",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "startDate",
+            "label": "Start Date",
+            "description": "",
+            "type": "date",
+            "validators": {}
+        },
+        {
+            "name": "employmentType",
+            "label": "Employment Type",
+            "description": "",
+            "type": "select",
+            "validators": {}
+        },
+        {
+            "name": "annualSalary",
+            "label": "Annual Salary",
+            "description": "",
+            "type": "number",
+            "validators": {}
+        },
+        {
+            "name": "workLocationPreference",
+            "label": "Work Location Preference",
+            "description": "",
+            "type": "check",
+            "validators": {}
+        }
+    ]
+}

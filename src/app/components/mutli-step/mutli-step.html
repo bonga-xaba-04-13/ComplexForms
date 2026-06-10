@@ -1,0 +1,30 @@
+@if (loading) {
+  <div class="loading">Loading form...</div>
+} @else if (loadedSteps.length > 0) {
+  <div class="stepper-container">
+    <!-- STEP NAVIGATION -->
+    <div class="step-nav">
+      @for (step of loadedSteps; track step.config.id; let i = $index) {
+        <button class="step-nav-btn" [class.active]="i === currentStepIndex" (click)="goToStep(i)">
+          {{ step.config.label }}
+        </button>
+      }
+    </div>
+
+    <!-- ACTIVE STEP FORM -->
+    <app-step-renderer [loadedStep]="currentLoadedStep" />
+
+    <!-- FOOTER -->
+    <div class="step-footer">
+      <span>Step {{ currentStepIndex + 1 }} of {{ loadedSteps.length }}</span>
+      <div class="step-actions">
+        <button [disabled]="isFirstStep" (click)="previous()">← Previous</button>
+        @if (!isLastStep) {
+          <button (click)="next()">Next →</button>
+        } @else {
+          <button>✓ Submit</button>
+        }
+      </div>
+    </div>
+  </div>
+}
