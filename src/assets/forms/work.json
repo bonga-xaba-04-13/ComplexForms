@@ -12,7 +12,10 @@
             "label": "Department",
             "description": "",
             "type": "select",
-            "validators": {}
+            "validators": {},
+            "optionsSource": {
+                "endpoint": "departments"
+            }
         },
         {
             "name": "directManager",
@@ -33,7 +36,10 @@
             "label": "Employment Type",
             "description": "",
             "type": "select",
-            "validators": {}
+            "validators": {},
+            "optionsSource": {
+                "endpoint": "employment-types"
+            }
         },
         {
             "name": "annualSalary",

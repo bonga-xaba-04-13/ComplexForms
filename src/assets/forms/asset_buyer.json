@@ -1,0 +1,46 @@
+{
+  "allowDynamicParticipants": true,
+  "controls": [
+    {
+      "name": "selectClient",
+      "label": "Select Client",
+      "description": "Search and select an existing client to populate this form",
+      "type": "select",
+      "validators": {},
+      "optionsSource": {
+        "endpoint": "clients",
+        "valueKey": "value",
+        "labelKey": "label",
+        "populates": {
+          "idNumber": "idNumber",
+          "profile": "profile",
+          "clientType": "clientType"
+        }
+      }
+    },
+    {
+      "name": "idNumber",
+      "label": "ID Number",
+      "description": "Enter ID number",
+      "type": "text",
+      "validators": { "required": true, "minLength": 10 }
+    },
+    {
+      "name": "profile",
+      "label": "Profile",
+      "description": "Enter profile",
+      "type": "text",
+      "validators": { "required": true }
+    },
+    {
+      "name": "clientType",
+      "label": "Client Type",
+      "description": "Select client type",
+      "type": "select",
+      "validators": { "required": true },
+      "optionsSource": {
+        "endpoint": "client-types"
+      }
+    }
+  ]
+}

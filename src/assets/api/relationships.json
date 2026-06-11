@@ -1,0 +1,7 @@
+[
+  { "value": "spouse", "label": "Spouse" },
+  { "value": "parent", "label": "Parent" },
+  { "value": "sibling", "label": "Sibling" },
+  { "value": "friend", "label": "Friend" },
+  { "value": "other", "label": "Other" }
+]

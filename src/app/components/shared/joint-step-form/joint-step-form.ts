@@ -1,20 +1,27 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin } from 'rxjs';
 import { ControlOption, JsonFormControl, LoadedStep } from '../../../models/form-fields';
 import { Api } from '../../../service/api';
 
+export const JOINT_CAPTURE_PERSONS = [
+  { key: 'user1', label: 'User 1' },
+  { key: 'user2', label: 'User 2' },
+] as const;
+
 @Component({
   standalone: true,
-  selector: 'app-step-form',
+  selector: 'app-joint-step-form',
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './step-form.html',
-  styleUrl: './step-form.scss',
+  templateUrl: './joint-step-form.html',
+  styleUrl: './joint-step-form.scss',
 })
-export class StepForm implements OnChanges {
+export class JointStepForm implements OnChanges {
   @Input() loadedStep: LoadedStep | undefined;
   @Input() isEditing = false;
+
+  readonly persons = JOINT_CAPTURE_PERSONS;
 
   dynamicOptions: Record<string, ControlOption[]> = {};
   private dynamicRawData: Record<string, any[]> = {};
@@ -57,7 +64,7 @@ export class StepForm implements OnChanges {
     return control.optionsSource ? (this.dynamicOptions[control.name] ?? []) : (control.options ?? []);
   }
 
-  onSelectChange(control: JsonFormControl, event: Event): void {
+  onSelectChange(personKey: string, control: JsonFormControl, event: Event): void {
     const populates = control.optionsSource?.populates;
     if (!populates || !this.loadedStep) {
       return;
@@ -71,12 +78,12 @@ export class StepForm implements OnChanges {
     }
 
     for (const [targetControl, sourceKey] of Object.entries(populates)) {
-      this.loadedStep.formGroup.get(targetControl)?.setValue(selected[sourceKey]);
+      this.loadedStep.formGroup.get(`${personKey}.${targetControl}`)?.setValue(selected[sourceKey]);
     }
   }
 
-  isInvalid(name: string): boolean {
-    const ctrl = this.loadedStep?.formGroup.get(name);
+  isInvalid(personKey: string, name: string): boolean {
+    const ctrl = this.loadedStep?.formGroup.get(`${personKey}.${name}`);
     return !!(ctrl && ctrl.invalid && ctrl.touched);
   }
 }

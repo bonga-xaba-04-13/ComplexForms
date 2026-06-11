@@ -1,0 +1,16 @@
+{
+  "allowDynamicParticipants": false,
+  "controls": [
+    {
+      "name": "captureType",
+      "label": "Capture Type",
+      "description": "Choose whether this asset is being purchased by a single applicant or jointly.",
+      "type": "radio",
+      "validators": { "required": true },
+      "options": [
+        { "label": "Single Asset Buy", "value": "single" },
+        { "label": "Joint Asset Buy", "value": "joint" }
+      ]
+    }
+  ]
+}

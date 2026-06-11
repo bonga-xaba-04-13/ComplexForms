@@ -1,0 +1,6 @@
+[
+  { "value": "salary", "label": "Salary" },
+  { "value": "business", "label": "Business Income" },
+  { "value": "investments", "label": "Investments" },
+  { "value": "rental", "label": "Rental Income" }
+]

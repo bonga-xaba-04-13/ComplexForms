@@ -1,0 +1,5 @@
+[
+  { "value": "individual", "label": "Individual" },
+  { "value": "sole_proprietor", "label": "Sole Proprietor" },
+  { "value": "joint_account_holder", "label": "Joint Account Holder" }
+]

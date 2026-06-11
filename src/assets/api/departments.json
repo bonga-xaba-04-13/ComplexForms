@@ -1,0 +1,7 @@
+[
+  { "value": "engineering", "label": "Engineering" },
+  { "value": "finance", "label": "Finance" },
+  { "value": "human_resources", "label": "Human Resources" },
+  { "value": "sales", "label": "Sales" },
+  { "value": "operations", "label": "Operations" }
+]

@@ -54,7 +54,10 @@
             "label": "Relationship",
             "description": "",
             "type": "select",
-            "validators": {}
+            "validators": {},
+            "optionsSource": {
+                "endpoint": "relationships"
+            }
         },
         {
             "name": "agreementAndConsent",

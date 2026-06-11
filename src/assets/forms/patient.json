@@ -40,7 +40,10 @@
             "label": "Gender",
             "description": "",
             "type": "select",
-            "validators": {}
+            "validators": {},
+            "optionsSource": {
+                "endpoint": "genders"
+            }
         },
         {
             "name": "address",

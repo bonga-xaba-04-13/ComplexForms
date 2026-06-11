@@ -5,16 +5,16 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Api } from '../../service/api';
 import { JsonFormControl, JsonFormdata, FormStep, MultiStepFormDefinition, LoadedStep } from '../../models/form-fields';
-import { StepForm } from '../shared/step-form/step-form';
+import { JointStepForm } from '../shared/joint-step-form/joint-step-form';
 
 @Component({
   standalone: true,
-  selector: 'app-patientcapture',
-  imports: [CommonModule, StepForm],
-  templateUrl: './patientcapture.html',
-  styleUrl: './patientcapture.scss',
+  selector: 'app-jointcapture',
+  imports: [CommonModule, JointStepForm],
+  templateUrl: './jointcapture.html',
+  styleUrl: './jointcapture.scss',
 })
-export class Patientcapture implements OnInit {
+export class Jointcapture implements OnInit {
   steps: FormStep[] = [];
   currentStepIndex = 0;
   loadedSteps: LoadedStep[] = [];
@@ -24,7 +24,7 @@ export class Patientcapture implements OnInit {
   constructor(
     private api: Api,
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<Patientcapture>,
+    private dialogRef: MatDialogRef<Jointcapture>,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {}
 
@@ -46,20 +46,28 @@ export class Patientcapture implements OnInit {
 
     this.loadedSteps = this.steps.map((step, i) => {
       const formData = formDataArray[i];
-      const group: Record<string, any> = {};
 
-      formData.controls.forEach((control: JsonFormControl) => {
-        const validators = control.validators?.['required'] ? [Validators.required] : [];
-        group[control.name] = ['', validators];
+      const stepGroup = this.fb.group({
+        user1: this.buildPersonGroup(formData),
+        user2: this.buildPersonGroup(formData),
       });
-
-      const stepGroup = this.fb.group(group);
       subGroups[step.id] = stepGroup;
 
       return { step, formData, formGroup: stepGroup };
     });
 
     this.parentForm = this.fb.group(subGroups);
+  }
+
+  private buildPersonGroup(formData: JsonFormdata): FormGroup {
+    const group: Record<string, any> = {};
+
+    formData.controls.forEach((control: JsonFormControl) => {
+      const validators = control.validators?.['required'] ? [Validators.required] : [];
+      group[control.name] = ['', validators];
+    });
+
+    return this.fb.group(group);
   }
 
   get currentLoadedStep(): LoadedStep | undefined {
@@ -96,7 +104,7 @@ export class Patientcapture implements OnInit {
 
   onSubmit(): void {
     if (this.parentForm.valid) {
-      console.log('Form submitted:', this.parentForm.value);
+      console.log('Joint capture submitted:', this.parentForm.value);
     } else {
       this.parentForm.markAllAsTouched();
     }

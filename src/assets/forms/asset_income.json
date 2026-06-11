@@ -1,0 +1,39 @@
+{
+  "allowDynamicParticipants": true,
+  "controls": [
+    {
+      "name": "employmentStatus",
+      "label": "Employment Status",
+      "description": "Select employment status",
+      "type": "select",
+      "validators": { "required": true },
+      "optionsSource": {
+        "endpoint": "employment-statuses"
+      }
+    },
+    {
+      "name": "employer",
+      "label": "Employer",
+      "description": "Enter employer name",
+      "type": "text",
+      "validators": {}
+    },
+    {
+      "name": "incomeSource",
+      "label": "Income Source",
+      "description": "Select primary income source",
+      "type": "select",
+      "validators": { "required": true },
+      "optionsSource": {
+        "endpoint": "income-sources"
+      }
+    },
+    {
+      "name": "grossMonthlyIncome",
+      "label": "Gross Monthly Income",
+      "description": "Enter gross monthly income",
+      "type": "number",
+      "validators": { "required": true }
+    }
+  ]
+}

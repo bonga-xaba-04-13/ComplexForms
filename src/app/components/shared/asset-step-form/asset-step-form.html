@@ -1,5 +1,5 @@
-@if (loadedStep) {
-  <div class="form-section" [formGroup]="loadedStep.formGroup">
+@if (loadedStep && activeGroup) {
+  <div class="form-section">
     <div class="form-header">
       <h1 class="form-title">{{ loadedStep.step.formTitle }}</h1>
       @if (loadedStep.step.formDescription) {
@@ -7,9 +7,20 @@
       }
     </div>
 
-    <div class="form-grid">
+    @if (loadedStep.isDynamic && isJoint) {
+      <div class="participant-tabs">
+        @for (participant of participants; track participant.key) {
+          <button type="button" class="tab-btn" [class.active]="loadedStep.activeParticipant === participant.key"
+            (click)="setParticipant(participant.key)">
+            {{ participant.label }}
+          </button>
+        }
+      </div>
+    }
+
+    <div class="form-grid" [formGroup]="activeGroup">
       @for (control of loadedStep.formData.controls; track control.name) {
-        <div class="form-group" [class.full-width]="control.type === 'textarea' || control.type === 'check'">
+        <div class="form-group" [class.full-width]="control.type === 'textarea' || control.type === 'check' || control.type === 'radio'">
           <label [for]="control.name">
             {{ control.label }}
             @if (control.validators && control.validators['required']) { <span class="required">*</span> }

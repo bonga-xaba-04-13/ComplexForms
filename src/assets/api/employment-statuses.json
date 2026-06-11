@@ -1,0 +1,6 @@
+[
+  { "value": "employed", "label": "Employed" },
+  { "value": "self_employed", "label": "Self-Employed" },
+  { "value": "unemployed", "label": "Unemployed" },
+  { "value": "retired", "label": "Retired" }
+]

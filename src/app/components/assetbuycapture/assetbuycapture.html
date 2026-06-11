@@ -1,17 +1,14 @@
 <div class="container">
-  <!-- TOP PREVIEW SECTION -->
-  <div class="preview-section">
-    <div class="preview-title">Captured Data</div>
-    <div class="preview-content">
-      <div class="preview-placeholder">Complete form steps to see preview data...</div>
-    </div>
+  <!-- PROGRESS BAR -->
+  <div class="progress-bar">
+    <div class="progress-fill" [style.width.%]="progressPercent"></div>
   </div>
 
   <!-- MAIN CONTENT -->
   <div class="content-wrapper">
     <!-- LEFT NAVIGATION -->
     <div class="nav-section">
-      <div class="nav-title">Forms</div>
+      <div class="nav-title">Steps</div>
       <div class="nav-buttons">
         @for (step of steps; track step.formUrl; let i = $index) {
           <button class="nav-btn" [class.active]="i === currentStepIndex" (click)="loadStep(i)">
@@ -21,24 +18,28 @@
       </div>
     </div>
 
-    <!-- STEP FORM (child component renders the active step) -->
-    <app-step-form [loadedStep]="currentLoadedStep" [isEditing]="isEditing" />
+    <!-- STEP FORM -->
+    <app-asset-step-form [loadedStep]="currentLoadedStep" [isJoint]="isJoint" [isEditing]="isEditing" />
   </div>
 
   <!-- FOOTER -->
   <div class="footer-section">
     <div class="footer-info">
       Step {{ currentStepIndex + 1 }} of {{ steps.length }}
+      @if (isLastStep && !allStepsComplete) {
+        <span class="incomplete-hint">Complete all required fields to submit</span>
+      }
     </div>
     <div class="footer-buttons">
       <button class="btn-secondary" (click)="toggleEdit()">{{ isEditing ? '🔒 Lock' : '✎ Edit' }}</button>
+      <button class="btn-secondary" (click)="onDraft()">Draft</button>
       <button class="btn-secondary" [disabled]="isFirstStep" (click)="previous()">← Previous</button>
       @if (!isLastStep) {
         <button class="btn-primary" (click)="next()">Next →</button>
-      } @else {
+      } @else if (allStepsComplete) {
         <button class="btn-success" (click)="onSubmit()">✓ Submit</button>
       }
-      <button class="btn-secondary" (click)="close()">✕ Close</button>
+      <button class="btn-secondary close-icon" (click)="close()">✕ Close</button>
     </div>
   </div>
 </div>

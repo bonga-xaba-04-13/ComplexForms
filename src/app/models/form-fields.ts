@@ -5,6 +5,18 @@ export type ControlType = 'text' | 'email' | 'tel' | 'date' | 'number' | 'select
 export interface ControlOption {
   label: string;
   value: string;
+  [key: string]: any;
+}
+
+export interface OptionsSource {
+  /** Demo: resolves to /assets/api/<endpoint>.json. Real backend: maps to an API route. */
+  endpoint: string;
+  /** Property on each returned object to use as the option value. Defaults to 'value'. */
+  valueKey?: string;
+  /** Property on each returned object to use as the option label. Defaults to 'label'. */
+  labelKey?: string;
+  /** Map of targetControlName -> sourceObjectKey, applied to other controls when an option is selected. */
+  populates?: Record<string, string>;
 }
 
 export interface JsonFormControl {
@@ -14,9 +26,12 @@ export interface JsonFormControl {
   type: ControlType;
   validators: { required?: boolean; [key: string]: any };
   options?: ControlOption[];
+  /** For 'select' controls: fetch options dynamically instead of using a static `options` list. */
+  optionsSource?: OptionsSource;
 }
 
 export interface JsonFormdata {
+  allowDynamicParticipants?: boolean;
   controls: JsonFormControl[];
 }
 

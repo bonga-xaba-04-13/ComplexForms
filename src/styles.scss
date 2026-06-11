@@ -37,3 +37,19 @@ body {
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */
+
+// Constrain dialog height so internal form sections can scroll while the
+// footer (Previous/Next/Submit/Close) stays pinned in view.
+.custom-dialog-container {
+  .mat-mdc-dialog-container {
+    height: 85vh;
+    max-height: 85vh;
+  }
+
+  .mdc-dialog__surface {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}

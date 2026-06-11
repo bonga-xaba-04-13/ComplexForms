@@ -1,0 +1,5 @@
+[
+  { "value": "single_residential", "label": "Single Residential Unit" },
+  { "value": "sectional_title", "label": "Sectional Title" },
+  { "value": "vacant_land", "label": "Vacant Land" }
+]

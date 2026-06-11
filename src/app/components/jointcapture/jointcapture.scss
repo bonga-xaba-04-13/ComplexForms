@@ -1,0 +1,239 @@
+// =============================================
+// Joint Capture Modal — Layout & Chrome Styles
+// (Form control styles live in shared/joint-step-form/joint-step-form.scss)
+// =============================================
+
+$primary:       #1e3a8a;
+$primary-light: #3b82f6;
+$secondary:     #64748b;
+$border:        #e2e8f0;
+$text-dark:     #1f2937;
+$text-light:    #6b7280;
+$bg-light:      #f9fafb;
+$success:       #059669;
+$success-dark:  #047857;
+$white:         #ffffff;
+
+@mixin label-uppercase {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+@mixin transition($props: all, $duration: 0.2s, $ease: ease) {
+  transition: $props $duration $ease;
+}
+
+@mixin scrollbar($thumb: $border, $thumb-hover: $secondary) {
+  &::-webkit-scrollbar       { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: $thumb;
+    border-radius: 3px;
+    &:hover { background: $thumb-hover; }
+  }
+}
+
+// ===== CONTAINER =====
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ===== PREVIEW SECTION =====
+.preview-section {
+  background-color: $bg-light;
+  border-bottom: 2px solid $border;
+  padding: 16px 30px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  .preview-title {
+    @include label-uppercase;
+    font-size: 12px;
+    color: $primary;
+    margin-bottom: 8px;
+  }
+
+  .preview-content {
+    overflow-y: auto;
+    flex: 1;
+    @include scrollbar;
+  }
+
+  .preview-placeholder {
+    font-size: 13px;
+    color: $text-light;
+  }
+}
+
+// ===== CONTENT WRAPPER =====
+.content-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+
+  .nav-section {
+    width: 200px;
+    background-color: $bg-light;
+    border-right: 1px solid $border;
+    padding: 30px 20px;
+    overflow-y: auto;
+    flex-shrink: 0;
+
+    .nav-title {
+      @include label-uppercase;
+      font-size: 11px;
+      color: $secondary;
+      margin-bottom: 20px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .nav-btn {
+        padding: 12px 16px;
+        background-color: $white;
+        border: 1px solid $border;
+        color: $text-dark;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        @include transition;
+        text-align: left;
+        border-radius: 4px;
+
+        &:hover {
+          border-color: $primary-light;
+          color: $primary-light;
+        }
+
+        &.active {
+          background-color: $primary;
+          color: $white;
+          border-color: $primary;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  app-joint-step-form {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+// ===== FOOTER SECTION =====
+.footer-section {
+  background-color: $white;
+  border-top: 1px solid $border;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+
+  .footer-info {
+    font-size: 12px;
+    color: $text-light;
+  }
+
+  .footer-buttons {
+    display: flex;
+    gap: 12px;
+
+    button {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      @include transition;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-secondary {
+      background-color: $white;
+      color: $text-dark;
+      border-color: $border;
+
+      &:hover:not(:disabled) {
+        background-color: $bg-light;
+        border-color: $text-dark;
+      }
+
+      &:disabled {
+        color: $secondary;
+        border-color: $border;
+        cursor: not-allowed;
+        background-color: $bg-light;
+      }
+    }
+
+    .btn-primary {
+      background-color: $primary;
+      color: $white;
+      border-color: $primary;
+
+      &:hover {
+        background-color: $primary-light;
+        border-color: $primary-light;
+      }
+    }
+
+    .btn-success {
+      background-color: $success;
+      color: $white;
+      border-color: $success;
+
+      &:hover {
+        background-color: $success-dark;
+      }
+    }
+  }
+}
+
+// ===== RESPONSIVE =====
+@media (max-width: 768px) {
+  .content-wrapper {
+    flex-direction: column;
+
+    .nav-section {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid $border;
+      padding: 12px 20px;
+      max-height: 70px;
+      overflow-x: auto;
+      overflow-y: hidden;
+
+      .nav-buttons {
+        flex-direction: row;
+        gap: 8px;
+
+        .nav-btn {
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+      }
+    }
+  }
+
+  .footer-section .footer-buttons {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}

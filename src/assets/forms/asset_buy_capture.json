@@ -1,0 +1,30 @@
+{
+  "formTitle": "Asset Buy Capture",
+  "formDescription": "Capture details for a single or joint asset purchase.",
+  "steps": [
+    {
+      "id": "scenarioStep",
+      "formTitle": "Capture Scenario",
+      "formDescription": "Define the scenario, choose single or joint asset buy capture.",
+      "formUrl": "scenario.json"
+    },
+    {
+      "id": "buyerStep",
+      "formTitle": "Buyer Details",
+      "formDescription": "Capture buyer identification details.",
+      "formUrl": "asset_buyer.json"
+    },
+    {
+      "id": "incomeStep",
+      "formTitle": "Income Details",
+      "formDescription": "Capture buyer income details.",
+      "formUrl": "asset_income.json"
+    },
+    {
+      "id": "propertyStep",
+      "formTitle": "Property Details",
+      "formDescription": "Capture details of the property being purchased.",
+      "formUrl": "asset_property.json"
+    }
+  ]
+}
