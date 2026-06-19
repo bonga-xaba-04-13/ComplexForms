@@ -1,0 +1,2767 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Patient Intake Form</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: #1a1a1a;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px
+    }
+
+    .auto__open-btn {
+      background: #1a3a5c;
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: .02em
+    }
+
+    .auto__open-btn:hover {
+      background: #15304d
+    }
+
+    .auto__overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px
+    }
+
+    .auto__overlay.auto__visible {
+      display: flex
+    }
+
+    .auto__modal {
+      background: #fff;
+      width: 100%;
+      max-width: 1080px;
+      height: 90vh;
+      max-height: 840px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #d0d5dd
+    }
+
+    /* Header */
+    .auto__header {
+      background: #1a3a5c;
+      padding: 16px 24px 0;
+      flex-shrink: 0
+    }
+
+    .auto__header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px
+    }
+
+    .auto__header-title {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600
+    }
+
+    .auto__header-sub {
+      color: #a8c4de;
+      font-size: 12px;
+      margin-top: 1px
+    }
+
+    .auto__close-btn {
+      background: transparent;
+      border: none;
+      color: #a8c4de;
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px
+    }
+
+    .auto__close-btn:hover {
+      color: #fff
+    }
+
+    .auto__progress-bar-wrap {
+      height: 3px;
+      background: rgba(255, 255, 255, .15);
+      border-radius: 2px;
+      overflow: hidden
+    }
+
+    .auto__progress-bar-fill {
+      height: 100%;
+      background: #4db6ac;
+      border-radius: 2px;
+      transition: width .3s ease
+    }
+
+    .auto__progress-meta {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0 12px
+    }
+
+    .auto__progress-label {
+      color: #a8c4de;
+      font-size: 11px
+    }
+
+    .auto__progress-pct {
+      color: #4db6ac;
+      font-size: 11px;
+      font-weight: 600
+    }
+
+    /* Body */
+    .auto__body {
+      display: flex;
+      flex: 1;
+      overflow: hidden
+    }
+
+    /* Sidebar */
+    .auto__sidebar {
+      width: 214px;
+      flex-shrink: 0;
+      background: #f8f9fa;
+      border-right: 1px solid #e4e7ec;
+      overflow-y: auto;
+      padding: 12px 0
+    }
+
+    .auto__sidebar-heading {
+      font-size: 10px;
+      font-weight: 600;
+      color: #8a94a6;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 0 16px 8px
+    }
+
+    .auto__step-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 16px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      color: #5a6478;
+      font-size: 13px;
+      border-left: 2px solid transparent;
+      transition: background .15s, color .15s
+    }
+
+    .auto__step-btn:hover {
+      background: #eef0f3;
+      color: #1a3a5c
+    }
+
+    .auto__step-btn.auto__step-active {
+      background: #e8f0f8;
+      color: #1a3a5c;
+      border-left-color: #1a3a5c;
+      font-weight: 500
+    }
+
+    .auto__step-btn.auto__step-complete {
+      color: #1a7a5e
+    }
+
+    .auto__step-btn.auto__step-complete .auto__step-num {
+      background: #1a7a5e;
+      color: #fff
+    }
+
+    .auto__step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e4e7ec;
+      color: #5a6478;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .auto__step-btn.auto__step-active .auto__step-num {
+      background: #1a3a5c;
+      color: #fff
+    }
+
+    .auto__step-label {
+      font-size: 12.5px;
+      line-height: 1.3;
+      flex: 1
+    }
+
+    .auto__step-status {
+      font-size: 11px;
+      color: #1a7a5e
+    }
+
+    /* Main */
+    .auto__main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    /* Tab bar */
+    .auto__tab-bar {
+      display: none;
+      border-bottom: 1px solid #e4e7ec;
+      background: #fff;
+      padding: 0 24px;
+      flex-shrink: 0
+    }
+
+    .auto__tab-bar.auto__visible {
+      display: flex
+    }
+
+    .auto__tab-btn {
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-size: 13px;
+      color: #5a6478;
+      font-weight: 500;
+      margin-bottom: -1px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: color .15s
+    }
+
+    .auto__tab-btn:hover {
+      color: #1a3a5c
+    }
+
+    .auto__tab-btn.auto__tab-active {
+      color: #1a3a5c;
+      border-bottom-color: #1a3a5c
+    }
+
+    .auto__tab-badge {
+      font-size: 10px;
+      background: #e4e7ec;
+      color: #5a6478;
+      border-radius: 10px;
+      padding: 1px 7px
+    }
+
+    .auto__tab-btn.auto__tab-active .auto__tab-badge {
+      background: #d6e4f0;
+      color: #1a3a5c
+    }
+
+    /* Form panels */
+    .auto__form-panels {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px
+    }
+
+    .auto__panel {
+      display: none
+    }
+
+    .auto__panel.auto__panel-active {
+      display: block
+    }
+
+    .auto__panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 4px
+    }
+
+    .auto__panel-desc {
+      font-size: 12.5px;
+      color: #6b7280;
+      margin-bottom: 20px;
+      line-height: 1.5
+    }
+
+    /* Fields — strict 2-column grid throughout */
+    .auto__field-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px 16px;
+      margin-bottom: 14px
+    }
+
+    .auto__span-2 {
+      grid-column: 1/-1
+    }
+
+    /* legacy aliases kept for any residual markup */
+    .auto__cols-1 .auto__field,
+    .auto__cols-1 {
+      grid-column: 1/-1
+    }
+
+    .auto__cols-2 {
+      grid-template-columns: repeat(2, 1fr)
+    }
+
+    .auto__cols-3 {
+      grid-template-columns: repeat(2, 1fr)
+    }
+
+    .auto__field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px
+    }
+
+    .auto__label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 3px
+    }
+
+    .auto__required {
+      color: #c0392b;
+      font-size: 11px
+    }
+
+    .auto__input,
+    .auto__select,
+    .auto__textarea {
+      padding: 8px 10px;
+      border: 1px solid #d0d5dd;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #1a1a1a;
+      background: #fff;
+      outline: none;
+      width: 100%;
+      font-family: inherit;
+      transition: border-color .15s
+    }
+
+    .auto__input:focus,
+    .auto__select:focus,
+    .auto__textarea:focus {
+      border-color: #1a3a5c;
+      box-shadow: 0 0 0 3px rgba(26, 58, 92, .08)
+    }
+
+    .auto__textarea {
+      resize: vertical;
+      min-height: 80px
+    }
+
+    .auto__select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a6478' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px
+    }
+
+    .auto__hint {
+      font-size: 11px;
+      color: #8a94a6;
+      line-height: 1.4
+    }
+
+    .auto__section-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0 16px
+    }
+
+    .auto__section-divider span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #8a94a6;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      white-space: nowrap
+    }
+
+    .auto__section-divider::before,
+    .auto__section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e4e7ec
+    }
+
+    .auto__radio-group,
+    .auto__check-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px
+    }
+
+    .auto__radio-item,
+    .auto__check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #374151
+    }
+
+    .auto__radio-item input,
+    .auto__check-item input {
+      cursor: pointer;
+      accent-color: #1a3a5c;
+      margin-top: 2px;
+      flex-shrink: 0
+    }
+
+    .auto__status-toggle {
+      display: flex;
+      border: 1px solid #d0d5dd;
+      border-radius: 4px;
+      overflow: hidden;
+      width: fit-content;
+      margin-top: 4px
+    }
+
+    .auto__status-toggle input[type=radio] {
+      display: none
+    }
+
+    .auto__status-toggle label {
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #5a6478;
+      border-right: 1px solid #d0d5dd;
+      transition: background .15s, color .15s;
+      user-select: none
+    }
+
+    .auto__status-toggle label:last-of-type {
+      border-right: none
+    }
+
+    .auto__status-toggle input[type=radio]:checked+label {
+      background: #1a3a5c;
+      color: #fff;
+      font-weight: 500
+    }
+
+    .auto__info-banner {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      color: #1e40af;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px
+    }
+
+    .auto__med-row {
+      border: 1px solid #e4e7ec;
+      border-radius: 4px;
+      padding: 14px;
+      margin-bottom: 12px
+    }
+
+    /* Footer */
+    .auto__footer {
+      border-top: 1px solid #e4e7ec;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      flex-shrink: 0
+    }
+
+    .auto__footer-left {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .auto__footer-right {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .auto__btn {
+      padding: 8px 18px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background .15s, border-color .15s, color .15s;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .auto__btn:disabled {
+      opacity: .45;
+      cursor: not-allowed
+    }
+
+    .auto__btn-ghost {
+      background: transparent;
+      border-color: #d0d5dd;
+      color: #374151
+    }
+
+    .auto__btn-ghost:hover:not(:disabled) {
+      background: #f3f4f6
+    }
+
+    .auto__btn-primary {
+      background: #1a3a5c;
+      color: #fff;
+      border-color: #1a3a5c
+    }
+
+    .auto__btn-primary:hover:not(:disabled) {
+      background: #15304d
+    }
+
+    .auto__btn-success {
+      background: #1a7a5e;
+      color: #fff;
+      border-color: #1a7a5e
+    }
+
+    .auto__btn-success:hover:not(:disabled) {
+      background: #15664f
+    }
+
+    .auto__footer-step-info {
+      font-size: 12px;
+      color: #8a94a6
+    }
+
+    /* Success */
+    .auto__success-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 48px 24px;
+      flex: 1
+    }
+
+    .auto__success-screen.auto__visible {
+      display: flex
+    }
+
+    .auto__success-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #d1fae5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px
+    }
+
+    .auto__success-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 8px
+    }
+
+    .auto__success-sub {
+      font-size: 14px;
+      color: #6b7280;
+      max-width: 360px;
+      line-height: 1.6
+    }
+
+    .auto__ref-num {
+      font-size: 12px;
+      color: #8a94a6;
+      margin-top: 12px;
+      font-family: monospace;
+      letter-spacing: .05em
+    }
+
+    /* Toast */
+    .auto__toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1a1a1a;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 13px;
+      z-index: 9999;
+      transition: transform .3s ease;
+      pointer-events: none;
+      white-space: nowrap
+    }
+
+    .auto__toast.auto__toast-show {
+      transform: translateX(-50%) translateY(0)
+    }
+
+    /* Scrollbars */
+    .auto__sidebar::-webkit-scrollbar,
+    .auto__form-panels::-webkit-scrollbar {
+      width: 4px
+    }
+
+    .auto__sidebar::-webkit-scrollbar-thumb,
+    .auto__form-panels::-webkit-scrollbar-thumb {
+      background: #d0d5dd;
+      border-radius: 2px
+    }
+
+    /* ═══ COMBOBOX ═══ */
+    .auto__combo-wrap {
+      position: relative
+    }
+
+    .auto__combo-input-row {
+      display: flex;
+      align-items: center;
+      border: 1px solid #d0d5dd;
+      border-radius: 4px;
+      background: #fff;
+      overflow: hidden;
+      transition: border-color .15s
+    }
+
+    .auto__combo-input-row:focus-within {
+      border-color: #1a3a5c;
+      box-shadow: 0 0 0 3px rgba(26, 58, 92, .08)
+    }
+
+    .auto__combo-input-row input {
+      flex: 1;
+      padding: 8px 10px;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1a1a1a;
+      background: transparent;
+      font-family: inherit;
+      min-width: 0
+    }
+
+    .auto__combo-spin {
+      width: 30px;
+      flex-shrink: 0;
+      display: none;
+      align-items: center;
+      justify-content: center
+    }
+
+    .auto__combo-spin.auto__visible {
+      display: flex;
+      animation: auto__spin .7s linear infinite
+    }
+
+    @keyframes auto__spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .auto__combo-clear-btn {
+      width: 28px;
+      flex-shrink: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #8a94a6;
+      font-size: 17px;
+      line-height: 1;
+      padding: 0
+    }
+
+    .auto__combo-clear-btn:hover {
+      color: #c0392b
+    }
+
+    .auto__combo-clear-btn.auto__visible {
+      display: flex
+    }
+
+    .auto__combo-drop {
+      display: none;
+      position: absolute;
+      top: calc(100% + 3px);
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #d0d5dd;
+      border-radius: 4px;
+      z-index: 2000;
+      max-height: 296px;
+      overflow-y: auto
+    }
+
+    .auto__combo-drop.auto__visible {
+      display: block
+    }
+
+    .auto__combo-item {
+      padding: 9px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border-bottom: 1px solid #f0f2f5;
+      transition: background .1s
+    }
+
+    .auto__combo-item:last-child {
+      border-bottom: none
+    }
+
+    .auto__combo-item:hover,
+    .auto__combo-item.auto__kb-focus {
+      background: #f0f5fb
+    }
+
+    .auto__ci-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700
+    }
+
+    .auto__icon-patient {
+      background: #dbeafe;
+      color: #1e40af
+    }
+
+    .auto__icon-doctor {
+      background: #dcfce7;
+      color: #166534
+    }
+
+    .auto__icon-med {
+      background: #fef3c7;
+      color: #92400e
+    }
+
+    .auto__icon-employer {
+      background: #f3e8ff;
+      color: #6b21a8
+    }
+
+    .auto__icon-scheme {
+      background: #ffe4e6;
+      color: #9f1239
+    }
+
+    .auto__ci-body {
+      flex: 1;
+      min-width: 0
+    }
+
+    .auto__ci-name {
+      font-weight: 500;
+      color: #1a1a1a;
+      font-size: 13px
+    }
+
+    .auto__ci-sub {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 1px
+    }
+
+    .auto__ci-badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-weight: 500;
+      white-space: nowrap;
+      align-self: center;
+      flex-shrink: 0
+    }
+
+    .auto__badge-existing {
+      background: #dbeafe;
+      color: #1e40af
+    }
+
+    .auto__badge-new {
+      background: #dcfce7;
+      color: #166534
+    }
+
+    .auto__combo-create {
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #1a3a5c;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-top: 1px solid #e4e7ec;
+      background: #f8f9fa
+    }
+
+    .auto__combo-create:hover {
+      background: #eef0f3
+    }
+
+    .auto__combo-no-results {
+      padding: 12px;
+      font-size: 13px;
+      color: #6b7280;
+      text-align: center
+    }
+
+    .auto__combo-selected {
+      display: none;
+      margin-top: 6px;
+      border: 1px solid #d0d5dd;
+      border-radius: 4px;
+      padding: 10px 12px;
+      background: #f8f9fa
+    }
+
+    .auto__combo-selected.auto__visible {
+      display: block
+    }
+
+    .auto__combo-sel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .auto__combo-sel-name {
+      font-weight: 500;
+      color: #1a1a1a;
+      font-size: 13px;
+      flex: 1
+    }
+
+    .auto__combo-sel-id {
+      font-size: 11px;
+      color: #8a94a6;
+      font-family: monospace
+    }
+
+    .auto__combo-sel-detail {
+      font-size: 11.5px;
+      color: #5a6478;
+      margin-top: 5px;
+      line-height: 1.5
+    }
+
+    .auto__combo-deselect {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #8a94a6;
+      font-size: 16px;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0
+    }
+
+    .auto__combo-deselect:hover {
+      color: #c0392b
+    }
+  </style>
+</head>
+
+<body>
+
+  <button class="auto__open-btn" onclick="openModal()">Open Patient Intake Form</button>
+  <div class="auto__toast" id="auto__toast"></div>
+
+  <div class="auto__overlay" id="auto__overlay">
+    <div class="auto__modal" role="dialog" aria-modal="true" aria-labelledby="auto__modal-title">
+
+      <!-- ── HEADER ── -->
+      <div class="auto__header">
+        <div class="auto__header-top">
+          <div>
+            <div class="auto__header-title" id="auto__modal-title">Patient Intake Registration</div>
+            <div class="auto__header-sub" id="auto__header-sub">Step 1 of 7 — Personal Information</div>
+          </div>
+          <button class="auto__close-btn" onclick="closeModal()" aria-label="Close">&times;</button>
+        </div>
+        <div class="auto__progress-bar-wrap">
+          <div class="auto__progress-bar-fill" id="auto__pfill" style="width:14.28%"></div>
+        </div>
+        <div class="auto__progress-meta">
+          <span class="auto__progress-label" id="auto__plabel">Personal Information</span>
+          <span class="auto__progress-pct" id="auto__ppct">14%</span>
+        </div>
+      </div>
+
+      <!-- ── BODY ── -->
+      <div class="auto__body" id="auto__body">
+
+        <!-- SIDEBAR -->
+        <nav class="auto__sidebar" aria-label="Form sections">
+          <div class="auto__sidebar-heading">Sections</div>
+          <button class="auto__step-btn auto__step-active" data-step="0" onclick="goToStep(0)"><span
+              class="auto__step-num">1</span><span class="auto__step-label">Personal Information</span><span
+              class="auto__step-status"></span></button>
+          <button class="auto__step-btn" data-step="1" onclick="goToStep(1)"><span class="auto__step-num">2</span><span
+              class="auto__step-label">Contact Details</span><span class="auto__step-status"></span></button>
+          <button class="auto__step-btn" data-step="2" onclick="goToStep(2)"><span class="auto__step-num">3</span><span
+              class="auto__step-label">Medical History</span><span class="auto__step-status"></span></button>
+          <button class="auto__step-btn" data-step="3" onclick="goToStep(3)"><span class="auto__step-num">4</span><span
+              class="auto__step-label">Current Medications</span><span class="auto__step-status"></span></button>
+          <button class="auto__step-btn" data-step="4" onclick="goToStep(4)"><span class="auto__step-num">5</span><span
+              class="auto__step-label">Lifestyle &amp; Social</span><span class="auto__step-status"></span></button>
+          <button class="auto__step-btn" data-step="5" onclick="goToStep(5)"><span class="auto__step-num">6</span><span
+              class="auto__step-label">Insurance &amp; Financial</span><span class="auto__step-status"></span></button>
+          <button class="auto__step-btn" data-step="6" onclick="goToStep(6)"><span class="auto__step-num">7</span><span
+              class="auto__step-label">Emergency Contacts</span><span class="auto__step-status"></span></button>
+        </nav>
+
+        <!-- MAIN -->
+        <div class="auto__main">
+
+          <!-- Tab bar — visible only when married -->
+          <div class="auto__tab-bar" id="auto__tab-bar">
+            <button class="auto__tab-btn auto__tab-active" data-tab="patient" onclick="switchTab('patient')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <circle cx="12" cy="7" r="4" />
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              </svg>
+              Patient <span class="auto__tab-badge">Active</span>
+            </button>
+            <button class="auto__tab-btn" data-tab="partner" onclick="switchTab('partner')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                aria-hidden="true">
+                <circle cx="12" cy="7" r="4" />
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              </svg>
+              Spouse / Partner <span class="auto__tab-badge" id="auto__partner-badge">Incomplete</span>
+            </button>
+          </div>
+
+          <div class="auto__form-panels" id="auto__panels">
+
+            <!-- ════════════════════════════════════════════════════════
+     STEP 0  ·  PERSONAL INFORMATION
+════════════════════════════════════════════════════════ -->
+            <div class="auto__panel auto__panel-active" data-step="0" data-tab="patient">
+              <div class="auto__panel-title">Personal Information</div>
+              <div class="auto__panel-desc">Search for an existing patient record to auto-fill, or enter new details
+                below.</div>
+
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <label class="auto__label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="#1a3a5c" stroke-width="2" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg> Search Existing Patient Records</label>
+                  <div id="cb_pat_p" class="auto__combo-wrap">
+                    <div class="auto__combo-input-row">
+                      <input type="text" placeholder="Type name or ID number to search…" autocomplete="off"
+                        oninput="cbSearch(this,'patient','p')" onkeydown="cbKeyNav(event,'patient','p')"
+                        onfocus="cbFocus(this,'patient','p')" />
+                      <svg class="auto__combo-spin" id="cb_pat_p_spin" width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                        <path
+                          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                      <button class="auto__combo-clear-btn" id="cb_pat_p_clr" onclick="cbClear('patient','p')"
+                        aria-label="Clear">×</button>
+                    </div>
+                    <div class="auto__combo-drop" id="cb_pat_p_drop"></div>
+                    <div class="auto__combo-selected" id="cb_pat_p_sel"></div>
+                  </div>
+                  <span class="auto__hint">Select a record to auto-fill the form, or leave blank to enter new patient
+                    details.</span>
+                </div>
+              </div>
+
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Title</label><select class="auto__select"
+                    id="p_title">
+                    <option value="">Select</option>
+                    <option>Mr</option>
+                    <option>Mrs</option>
+                    <option>Ms</option>
+                    <option>Miss</option>
+                    <option>Dr</option>
+                    <option>Prof</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">First Name <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text" id="p_first_name"
+                    placeholder="e.g. Sipho" /></div>
+                <div class="auto__field"><label class="auto__label">Middle Name</label><input class="auto__input"
+                    type="text" id="p_middle_name" placeholder="Optional" /></div>
+                <div class="auto__field"><label class="auto__label">Last Name / Surname <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text" id="p_last_name"
+                    placeholder="e.g. Dlamini" /></div>
+                <div class="auto__field"><label class="auto__label">Preferred Name</label><input class="auto__input"
+                    type="text" id="p_preferred_name" placeholder="If different from first name" /></div>
+              </div>
+
+              <div class="auto__section-divider"><span>Identity &amp; Demographics</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Date of Birth <span
+                      class="auto__required">*</span></label><input class="auto__input" type="date" id="p_dob" /></div>
+                <div class="auto__field"><label class="auto__label">Gender <span
+                      class="auto__required">*</span></label><select class="auto__select" id="p_gender">
+                    <option value="">Select</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Non-binary</option>
+                    <option>Prefer not to say</option>
+                    <option>Other</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Nationality</label><select class="auto__select"
+                    id="p_nationality">
+                    <option value="">Select</option>
+                    <option>South African</option>
+                    <option>Zimbabwean</option>
+                    <option>Mozambican</option>
+                    <option>Malawian</option>
+                    <option>Zambian</option>
+                    <option>Namibian</option>
+                    <option>Botswanan</option>
+                    <option>Other African</option>
+                    <option>Other</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">ID Type</label><select class="auto__select"
+                    id="p_id_type">
+                    <option>South African ID</option>
+                    <option>Passport</option>
+                    <option>Asylum Permit</option>
+                    <option>Work Permit</option>
+                  </select></div>
+                <div class="auto__field auto__span-2"><label class="auto__label">ID Number / Passport <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text" id="p_id_number"
+                    placeholder="13-digit SA ID or passport number" /></div>
+              </div>
+
+              <div class="auto__section-divider"><span>Marital Status</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <label class="auto__label">Marital Status <span class="auto__required">*</span></label>
+                  <div class="auto__status-toggle">
+                    <input type="radio" name="p_marital" id="ms_single" value="single" checked
+                      onchange="onMaritalChange(this)" /><label for="ms_single">Single</label>
+                    <input type="radio" name="p_marital" id="ms_married" value="married"
+                      onchange="onMaritalChange(this)" /><label for="ms_married">Married / Partnered</label>
+                    <input type="radio" name="p_marital" id="ms_divorced" value="divorced"
+                      onchange="onMaritalChange(this)" /><label for="ms_divorced">Divorced</label>
+                    <input type="radio" name="p_marital" id="ms_widowed" value="widowed"
+                      onchange="onMaritalChange(this)" /><label for="ms_widowed">Widowed</label>
+                  </div>
+                  <span class="auto__hint" id="marital_hint">Selecting "Married / Partnered" enables the spouse/partner
+                    tab throughout all sections.</span>
+                </div>
+                <div class="auto__field"><label class="auto__label">Race / Population Group</label><select
+                    class="auto__select" id="p_race">
+                    <option value="">Prefer not to say</option>
+                    <option>African / Black</option>
+                    <option>Coloured</option>
+                    <option>Indian / Asian</option>
+                    <option>White</option>
+                    <option>Other</option>
+                  </select><span class="auto__hint">Optional — used for equitable health reporting</span></div>
+                <div class="auto__field"><label class="auto__label">Home Language</label><select class="auto__select"
+                    id="p_language">
+                    <option value="">Select</option>
+                    <option>isiZulu</option>
+                    <option>isiXhosa</option>
+                    <option>Afrikaans</option>
+                    <option>English</option>
+                    <option>Sepedi</option>
+                    <option>Setswana</option>
+                    <option>Sesotho</option>
+                    <option>Xitsonga</option>
+                    <option>siSwati</option>
+                    <option>Tshivenda</option>
+                    <option>isiNdebele</option>
+                    <option>Other</option>
+                  </select></div>
+              </div>
+            </div>
+
+            <!-- STEP 0 · PARTNER -->
+            <div class="auto__panel" data-step="0" data-tab="partner">
+              <div class="auto__info-banner"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>Search for an existing record or enter new spouse / partner details below.</div>
+              <div class="auto__panel-title">Spouse / Partner — Personal Information</div>
+              <div class="auto__panel-desc">Legal name and identification details for the spouse or partner.</div>
+
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <label class="auto__label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="#1a3a5c" stroke-width="2" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg> Search Existing Patient Records — Spouse / Partner</label>
+                  <div id="cb_pat_s" class="auto__combo-wrap">
+                    <div class="auto__combo-input-row">
+                      <input type="text" placeholder="Type name or ID number…" autocomplete="off"
+                        oninput="cbSearch(this,'patient','s')" onkeydown="cbKeyNav(event,'patient','s')"
+                        onfocus="cbFocus(this,'patient','s')" />
+                      <svg class="auto__combo-spin" id="cb_pat_s_spin" width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                        <path
+                          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                      <button class="auto__combo-clear-btn" id="cb_pat_s_clr" onclick="cbClear('patient','s')"
+                        aria-label="Clear">×</button>
+                    </div>
+                    <div class="auto__combo-drop" id="cb_pat_s_drop"></div>
+                    <div class="auto__combo-selected" id="cb_pat_s_sel"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Title</label><select class="auto__select"
+                    id="s_title">
+                    <option value="">Select</option>
+                    <option>Mr</option>
+                    <option>Mrs</option>
+                    <option>Ms</option>
+                    <option>Miss</option>
+                    <option>Dr</option>
+                    <option>Prof</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">First Name <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text" id="s_first_name"
+                    placeholder="e.g. Nomsa" /></div>
+                <div class="auto__field"><label class="auto__label">Middle Name</label><input class="auto__input"
+                    type="text" id="s_middle_name" /></div>
+                <div class="auto__field"><label class="auto__label">Last Name / Surname <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text" id="s_last_name" />
+                </div>
+                <div class="auto__field"><label class="auto__label">Preferred Name</label><input class="auto__input"
+                    type="text" id="s_preferred_name" /></div>
+              </div>
+              <div class="auto__section-divider"><span>Identity &amp; Demographics</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Date of Birth</label><input class="auto__input"
+                    type="date" id="s_dob" /></div>
+                <div class="auto__field"><label class="auto__label">Gender</label><select class="auto__select"
+                    id="s_gender">
+                    <option value="">Select</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Non-binary</option>
+                    <option>Prefer not to say</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Nationality</label><select class="auto__select"
+                    id="s_nationality">
+                    <option value="">Select</option>
+                    <option>South African</option>
+                    <option>Zimbabwean</option>
+                    <option>Mozambican</option>
+                    <option>Other African</option>
+                    <option>Other</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">ID Type</label><select class="auto__select"
+                    id="s_id_type">
+                    <option>South African ID</option>
+                    <option>Passport</option>
+                    <option>Asylum Permit</option>
+                    <option>Work Permit</option>
+                  </select></div>
+                <div class="auto__field auto__span-2"><label class="auto__label">ID Number / Passport</label><input
+                    class="auto__input" type="text" id="s_id_number" /></div>
+                <div class="auto__field"><label class="auto__label">Race / Population Group</label><select
+                    class="auto__select" id="s_race">
+                    <option value="">Prefer not to say</option>
+                    <option>African / Black</option>
+                    <option>Coloured</option>
+                    <option>Indian / Asian</option>
+                    <option>White</option>
+                    <option>Other</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Home Language</label><select class="auto__select"
+                    id="s_language">
+                    <option value="">Select</option>
+                    <option>isiZulu</option>
+                    <option>isiXhosa</option>
+                    <option>Afrikaans</option>
+                    <option>English</option>
+                    <option>Sepedi</option>
+                    <option>Setswana</option>
+                    <option>Sesotho</option>
+                    <option>Other</option>
+                  </select></div>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════
+     STEP 1  ·  CONTACT DETAILS
+════════════════════════════════════════════════════════ -->
+            <div class="auto__panel" data-step="1" data-tab="patient">
+              <div class="auto__panel-title">Contact Details</div>
+              <div class="auto__panel-desc">Primary contact information, address, and referring practitioner for the
+                patient.</div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Mobile Number <span
+                      class="auto__required">*</span></label><input class="auto__input" type="tel" id="p_mobile"
+                    placeholder="+27 82 000 0000" /></div>
+                <div class="auto__field"><label class="auto__label">Alternate Phone</label><input class="auto__input"
+                    type="tel" id="p_alt_phone" /></div>
+                <div class="auto__field"><label class="auto__label">Email Address <span
+                      class="auto__required">*</span></label><input class="auto__input" type="email" id="p_email"
+                    placeholder="patient@example.com" /></div>
+                <div class="auto__field"><label class="auto__label">Preferred Contact Method</label><select
+                    class="auto__select">
+                    <option>Mobile</option>
+                    <option>Email</option>
+                    <option>WhatsApp</option>
+                    <option>Home Phone</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Residential Address</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Street Address / Unit <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text" id="p_street"
+                    placeholder="e.g. 12 Oak Ave, Unit 3B" /></div>
+                <div class="auto__field"><label class="auto__label">Suburb / Township</label><input class="auto__input"
+                    type="text" id="p_suburb" /></div>
+                <div class="auto__field"><label class="auto__label">City / Town <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text" id="p_city" /></div>
+                <div class="auto__field"><label class="auto__label">Province</label><select class="auto__select"
+                    id="p_province">
+                    <option value="">Select</option>
+                    <option>Gauteng</option>
+                    <option>Western Cape</option>
+                    <option>KwaZulu-Natal</option>
+                    <option>Eastern Cape</option>
+                    <option>Limpopo</option>
+                    <option>Mpumalanga</option>
+                    <option>North West</option>
+                    <option>Free State</option>
+                    <option>Northern Cape</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Postal Code</label><input class="auto__input"
+                    type="text" id="p_postal_code" maxlength="4" /></div>
+                <div class="auto__field"><label class="auto__label">Country</label><select class="auto__select">
+                    <option>South Africa</option>
+                    <option>Other</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Referring Doctor / GP</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <label class="auto__label">Search Referring Practitioner</label>
+                  <div id="cb_doc_p" class="auto__combo-wrap">
+                    <div class="auto__combo-input-row">
+                      <input type="text" placeholder="Type doctor name or practice…" autocomplete="off"
+                        oninput="cbSearch(this,'doctor','p')" onkeydown="cbKeyNav(event,'doctor','p')"
+                        onfocus="cbFocus(this,'doctor','p')" />
+                      <svg class="auto__combo-spin" id="cb_doc_p_spin" width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                        <path
+                          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                      <button class="auto__combo-clear-btn" id="cb_doc_p_clr" onclick="cbClear('doctor','p')"
+                        aria-label="Clear">×</button>
+                    </div>
+                    <div class="auto__combo-drop" id="cb_doc_p_drop"></div>
+                    <div class="auto__combo-selected" id="cb_doc_p_sel"></div>
+                  </div>
+                  <span class="auto__hint">Select existing practitioner record or create a new one.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="auto__panel" data-step="1" data-tab="partner">
+              <div class="auto__info-banner"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>Contact details for the spouse / partner.</div>
+              <div class="auto__panel-title">Spouse / Partner — Contact Details</div>
+              <div class="auto__panel-desc">Primary contact information and address for the spouse or partner.</div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Mobile Number <span
+                      class="auto__required">*</span></label><input class="auto__input" type="tel"
+                    placeholder="+27 82 000 0000" /></div>
+                <div class="auto__field"><label class="auto__label">Email Address</label><input class="auto__input"
+                    type="email" /></div>
+                <div class="auto__field"><label class="auto__label">Alternate Phone</label><input class="auto__input"
+                    type="tel" /></div>
+                <div class="auto__field"><label class="auto__label">Preferred Contact Method</label><select
+                    class="auto__select">
+                    <option>Mobile</option>
+                    <option>Email</option>
+                    <option>WhatsApp</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Residential Address</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <div class="auto__check-group"><label class="auto__check-item"><input type="checkbox"
+                        onchange="toggleBlock('s_addr_block',this,false)" style="margin-top:0"> Same address as
+                      patient</label></div>
+                </div>
+              </div>
+              <div id="s_addr_block">
+                <div class="auto__field-row">
+                  <div class="auto__field auto__span-2"><label class="auto__label">Street Address</label><input
+                      class="auto__input" type="text" /></div>
+                  <div class="auto__field"><label class="auto__label">Suburb</label><input class="auto__input"
+                      type="text" /></div>
+                  <div class="auto__field"><label class="auto__label">City</label><input class="auto__input"
+                      type="text" /></div>
+                  <div class="auto__field"><label class="auto__label">Province</label><select class="auto__select">
+                      <option value="">Select</option>
+                      <option>Gauteng</option>
+                      <option>Western Cape</option>
+                      <option>KwaZulu-Natal</option>
+                      <option>Eastern Cape</option>
+                      <option>Limpopo</option>
+                      <option>Mpumalanga</option>
+                      <option>North West</option>
+                      <option>Free State</option>
+                      <option>Northern Cape</option>
+                    </select></div>
+                  <div class="auto__field"><label class="auto__label">Postal Code</label><input class="auto__input"
+                      type="text" maxlength="4" /></div>
+                  <div class="auto__field"><label class="auto__label">Country</label><select class="auto__select">
+                      <option>South Africa</option>
+                      <option>Other</option>
+                    </select></div>
+                </div>
+              </div>
+              <div class="auto__section-divider"><span>Referring Doctor / GP</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <label class="auto__label">Search Referring Practitioner — Spouse / Partner</label>
+                  <div id="cb_doc_s" class="auto__combo-wrap">
+                    <div class="auto__combo-input-row">
+                      <input type="text" placeholder="Type doctor name or practice…" autocomplete="off"
+                        oninput="cbSearch(this,'doctor','s')" onkeydown="cbKeyNav(event,'doctor','s')"
+                        onfocus="cbFocus(this,'doctor','s')" />
+                      <svg class="auto__combo-spin" id="cb_doc_s_spin" width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                        <path
+                          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                      <button class="auto__combo-clear-btn" id="cb_doc_s_clr" onclick="cbClear('doctor','s')"
+                        aria-label="Clear">×</button>
+                    </div>
+                    <div class="auto__combo-drop" id="cb_doc_s_drop"></div>
+                    <div class="auto__combo-selected" id="cb_doc_s_sel"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════
+     STEP 2  ·  MEDICAL HISTORY
+════════════════════════════════════════════════════════ -->
+            <div class="auto__panel" data-step="2" data-tab="patient">
+              <div class="auto__panel-title">Medical History</div>
+              <div class="auto__panel-desc">Pre-existing conditions, surgical history, allergies, and family health
+                background.</div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Pre-existing Conditions</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> Diabetes (Type 1/2)</label>
+                    <label class="auto__check-item"><input type="checkbox"> Hypertension</label>
+                    <label class="auto__check-item"><input type="checkbox"> Heart Disease</label>
+                    <label class="auto__check-item"><input type="checkbox"> Asthma / COPD</label>
+                    <label class="auto__check-item"><input type="checkbox"> HIV / AIDS</label>
+                    <label class="auto__check-item"><input type="checkbox"> Tuberculosis</label>
+                    <label class="auto__check-item"><input type="checkbox"> Cancer</label>
+                    <label class="auto__check-item"><input type="checkbox"> Epilepsy</label>
+                    <label class="auto__check-item"><input type="checkbox"> Mental Health Disorder</label>
+                    <label class="auto__check-item"><input type="checkbox"> None of the above</label>
+                  </div>
+                </div>
+                <div class="auto__field auto__span-2"><label class="auto__label">Other / Additional
+                    Diagnoses</label><textarea class="auto__textarea"
+                    placeholder="List any other diagnosed conditions not covered above…"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Surgical &amp; Hospitalisation History</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Previous surgeries or
+                    hospitalisations</label><textarea class="auto__textarea"
+                    placeholder="Include procedure name, approximate year, and hospital if known…"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Allergies</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Known Allergies</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> Penicillin</label>
+                    <label class="auto__check-item"><input type="checkbox"> Sulfa Drugs</label>
+                    <label class="auto__check-item"><input type="checkbox"> Aspirin / NSAIDs</label>
+                    <label class="auto__check-item"><input type="checkbox"> Latex</label>
+                    <label class="auto__check-item"><input type="checkbox"> Food Allergies</label>
+                    <label class="auto__check-item"><input type="checkbox"> No known allergies</label>
+                  </div>
+                </div>
+                <div class="auto__field auto__span-2"><label class="auto__label">Describe Allergic
+                    Reactions</label><textarea class="auto__textarea"
+                    placeholder="Reaction type and severity for each allergy…" style="min-height:60px"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Family Medical History</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Family history of significant
+                    conditions</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> Heart Disease</label>
+                    <label class="auto__check-item"><input type="checkbox"> Diabetes</label>
+                    <label class="auto__check-item"><input type="checkbox"> Cancer</label>
+                    <label class="auto__check-item"><input type="checkbox"> Hypertension</label>
+                    <label class="auto__check-item"><input type="checkbox"> Mental Illness</label>
+                    <label class="auto__check-item"><input type="checkbox"> Stroke</label>
+                    <label class="auto__check-item"><input type="checkbox"> None known</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="auto__panel" data-step="2" data-tab="partner">
+              <div class="auto__info-banner"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>Medical history for the spouse / partner.</div>
+              <div class="auto__panel-title">Spouse / Partner — Medical History</div>
+              <div class="auto__panel-desc">Pre-existing conditions, allergies, and family background for the spouse or
+                partner.</div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Pre-existing Conditions</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> Diabetes</label>
+                    <label class="auto__check-item"><input type="checkbox"> Hypertension</label>
+                    <label class="auto__check-item"><input type="checkbox"> Heart Disease</label>
+                    <label class="auto__check-item"><input type="checkbox"> Asthma / COPD</label>
+                    <label class="auto__check-item"><input type="checkbox"> HIV / AIDS</label>
+                    <label class="auto__check-item"><input type="checkbox"> Tuberculosis</label>
+                    <label class="auto__check-item"><input type="checkbox"> Cancer</label>
+                    <label class="auto__check-item"><input type="checkbox"> Epilepsy</label>
+                    <label class="auto__check-item"><input type="checkbox"> Mental Health Disorder</label>
+                    <label class="auto__check-item"><input type="checkbox"> None of the above</label>
+                  </div>
+                </div>
+                <div class="auto__field auto__span-2"><label class="auto__label">Other / Additional
+                    Diagnoses</label><textarea class="auto__textarea"
+                    placeholder="List additional diagnosed conditions…"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Surgical &amp; Hospitalisation History</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Previous surgeries or
+                    hospitalisations</label><textarea class="auto__textarea"
+                    placeholder="Include procedure, year, and hospital if known…"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Allergies</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Known Allergies</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> Penicillin</label>
+                    <label class="auto__check-item"><input type="checkbox"> Sulfa Drugs</label>
+                    <label class="auto__check-item"><input type="checkbox"> Aspirin / NSAIDs</label>
+                    <label class="auto__check-item"><input type="checkbox"> Latex</label>
+                    <label class="auto__check-item"><input type="checkbox"> Food Allergies</label>
+                    <label class="auto__check-item"><input type="checkbox"> No known allergies</label>
+                  </div>
+                </div>
+                <div class="auto__field auto__span-2"><label class="auto__label">Describe Allergic
+                    Reactions</label><textarea class="auto__textarea" style="min-height:60px"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Family Medical History</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Family history of significant
+                    conditions</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> Heart Disease</label>
+                    <label class="auto__check-item"><input type="checkbox"> Diabetes</label>
+                    <label class="auto__check-item"><input type="checkbox"> Cancer</label>
+                    <label class="auto__check-item"><input type="checkbox"> Hypertension</label>
+                    <label class="auto__check-item"><input type="checkbox"> Mental Illness</label>
+                    <label class="auto__check-item"><input type="checkbox"> Stroke</label>
+                    <label class="auto__check-item"><input type="checkbox"> None known</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════
+     STEP 3  ·  CURRENT MEDICATIONS
+════════════════════════════════════════════════════════ -->
+            <div class="auto__panel" data-step="3" data-tab="patient">
+              <div class="auto__panel-title">Current Medications</div>
+              <div class="auto__panel-desc">All prescription, over-the-counter, and herbal remedies. Search by
+                medication name below.</div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Is the patient currently taking any
+                    medications?</label>
+                  <div class="auto__radio-group">
+                    <label class="auto__radio-item"><input type="radio" name="p_on_meds" value="yes"
+                        onchange="toggleBlock('p_med_block',this,true)"> Yes</label>
+                    <label class="auto__radio-item"><input type="radio" name="p_on_meds" value="no"
+                        onchange="toggleBlock('p_med_block',this,false)" checked> No</label>
+                  </div>
+                </div>
+              </div>
+              <div id="p_med_block" style="display:none;margin-top:4px">
+                <div id="p_med_list"></div>
+                <button type="button" class="auto__btn auto__btn-ghost" style="font-size:12px"
+                  onclick="addMedRow('p')">+ Add Another Medication</button>
+              </div>
+              <div class="auto__section-divider"><span>Traditional / Herbal Remedies</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Using traditional or herbal
+                    remedies?</label>
+                  <div class="auto__radio-group">
+                    <label class="auto__radio-item"><input type="radio" name="p_herbal" value="yes"> Yes</label>
+                    <label class="auto__radio-item"><input type="radio" name="p_herbal" value="no" checked> No</label>
+                  </div>
+                </div>
+                <div class="auto__field auto__span-2"><label class="auto__label">Describe remedies used</label><textarea
+                    class="auto__textarea" style="min-height:60px"
+                    placeholder="List any traditional medicine, supplements, or herbal remedies…"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Vaccinations</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Vaccination status</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> COVID-19</label>
+                    <label class="auto__check-item"><input type="checkbox"> Influenza (Flu)</label>
+                    <label class="auto__check-item"><input type="checkbox"> Hepatitis B</label>
+                    <label class="auto__check-item"><input type="checkbox"> Tetanus</label>
+                    <label class="auto__check-item"><input type="checkbox"> MMR</label>
+                    <label class="auto__check-item"><input type="checkbox"> Unsure / No records</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="auto__panel" data-step="3" data-tab="partner">
+              <div class="auto__info-banner"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>Medications for the spouse / partner.</div>
+              <div class="auto__panel-title">Spouse / Partner — Current Medications</div>
+              <div class="auto__panel-desc">All medications and remedies currently taken by the spouse or partner.</div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Is the spouse/partner currently taking
+                    any medications?</label>
+                  <div class="auto__radio-group">
+                    <label class="auto__radio-item"><input type="radio" name="s_on_meds" value="yes"
+                        onchange="toggleBlock('s_med_block',this,true)"> Yes</label>
+                    <label class="auto__radio-item"><input type="radio" name="s_on_meds" value="no"
+                        onchange="toggleBlock('s_med_block',this,false)" checked> No</label>
+                  </div>
+                </div>
+              </div>
+              <div id="s_med_block" style="display:none;margin-top:4px">
+                <div id="s_med_list"></div>
+                <button type="button" class="auto__btn auto__btn-ghost" style="font-size:12px"
+                  onclick="addMedRow('s')">+ Add Another Medication</button>
+              </div>
+              <div class="auto__section-divider"><span>Traditional / Herbal Remedies</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Using traditional or herbal
+                    remedies?</label>
+                  <div class="auto__radio-group">
+                    <label class="auto__radio-item"><input type="radio" name="s_herbal" value="yes"> Yes</label>
+                    <label class="auto__radio-item"><input type="radio" name="s_herbal" value="no" checked> No</label>
+                  </div>
+                </div>
+                <div class="auto__field auto__span-2"><label class="auto__label">Describe remedies used</label><textarea
+                    class="auto__textarea" style="min-height:60px"></textarea></div>
+              </div>
+              <div class="auto__section-divider"><span>Vaccinations</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Vaccination status</label>
+                  <div class="auto__check-group">
+                    <label class="auto__check-item"><input type="checkbox"> COVID-19</label>
+                    <label class="auto__check-item"><input type="checkbox"> Influenza</label>
+                    <label class="auto__check-item"><input type="checkbox"> Hepatitis B</label>
+                    <label class="auto__check-item"><input type="checkbox"> Tetanus</label>
+                    <label class="auto__check-item"><input type="checkbox"> MMR</label>
+                    <label class="auto__check-item"><input type="checkbox"> Unsure / No records</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════
+     STEP 4  ·  LIFESTYLE & SOCIAL
+════════════════════════════════════════════════════════ -->
+            <div class="auto__panel" data-step="4" data-tab="patient">
+              <div class="auto__panel-title">Lifestyle &amp; Social History</div>
+              <div class="auto__panel-desc">Lifestyle factors relevant to the patient's care and treatment planning.
+              </div>
+              <div class="auto__section-divider"><span>Substance Use</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Smoking Status</label><select class="auto__select">
+                    <option>Never smoked</option>
+                    <option>Current smoker</option>
+                    <option>Former smoker</option>
+                    <option>Occasional smoker</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Alcohol Consumption</label><select
+                    class="auto__select">
+                    <option>Never</option>
+                    <option>Social / Occasional</option>
+                    <option>Moderate (3-4x/week)</option>
+                    <option>Heavy (daily)</option>
+                    <option>Recovering</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Recreational Drug Use</label><select
+                    class="auto__select">
+                    <option>Never</option>
+                    <option>Past use only</option>
+                    <option>Current occasional</option>
+                    <option>Current regular</option>
+                    <option>Prefer not to say</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Exercise Frequency</label><select
+                    class="auto__select">
+                    <option>Sedentary (none)</option>
+                    <option>Light (1-2x/week)</option>
+                    <option>Moderate (3-4x/week)</option>
+                    <option>Active (5+ days/week)</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Diet</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Dietary Preference /
+                    Restrictions</label><select class="auto__select">
+                    <option>No restrictions</option>
+                    <option>Vegetarian</option>
+                    <option>Vegan</option>
+                    <option>Halaal</option>
+                    <option>Kosher</option>
+                    <option>Diabetic diet</option>
+                    <option>Low sodium</option>
+                    <option>Other</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Occupation &amp; Employer</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Occupation / Job Title</label><input
+                    class="auto__input" type="text" placeholder="e.g. Teacher, Nurse, Accountant" /></div>
+                <div class="auto__field"><label class="auto__label">Housing Situation</label><select
+                    class="auto__select">
+                    <option>Own home</option>
+                    <option>Renting</option>
+                    <option>Living with family</option>
+                    <option>Informal settlement</option>
+                    <option>Other</option>
+                  </select></div>
+                <div class="auto__field auto__span-2">
+                  <label class="auto__label">Employer</label>
+                  <div id="cb_emp_p" class="auto__combo-wrap">
+                    <div class="auto__combo-input-row">
+                      <input type="text" placeholder="Search employer or organisation…" autocomplete="off"
+                        oninput="cbSearch(this,'employer','p')" onkeydown="cbKeyNav(event,'employer','p')"
+                        onfocus="cbFocus(this,'employer','p')" />
+                      <svg class="auto__combo-spin" id="cb_emp_p_spin" width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                        <path
+                          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                      <button class="auto__combo-clear-btn" id="cb_emp_p_clr" onclick="cbClear('employer','p')"
+                        aria-label="Clear">×</button>
+                    </div>
+                    <div class="auto__combo-drop" id="cb_emp_p_drop"></div>
+                    <div class="auto__combo-selected" id="cb_emp_p_sel"></div>
+                  </div>
+                </div>
+                <div class="auto__field"><label class="auto__label">Number of Dependants</label><input
+                    class="auto__input" type="number" min="0" max="20" placeholder="0" /></div>
+                <div class="auto__field"><label class="auto__label">Household Monthly Income</label><select
+                    class="auto__select">
+                    <option value="">Prefer not to say</option>
+                    <option>Under R5,000</option>
+                    <option>R5,001–R15,000</option>
+                    <option>R15,001–R30,000</option>
+                    <option>R30,001–R60,000</option>
+                    <option>Over R60,000</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Reproductive Health</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Pregnancy Status</label><select
+                    class="auto__select">
+                    <option>Not applicable</option>
+                    <option>Not pregnant</option>
+                    <option>Currently pregnant</option>
+                    <option>Postpartum (within 12 months)</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Contraceptive Use</label><select
+                    class="auto__select">
+                    <option>Not applicable</option>
+                    <option>None</option>
+                    <option>Oral contraceptive pill</option>
+                    <option>Injectable (Depo-Provera)</option>
+                    <option>IUD / Implant</option>
+                    <option>Condoms</option>
+                    <option>Sterilised</option>
+                    <option>Other</option>
+                  </select></div>
+              </div>
+            </div>
+
+            <div class="auto__panel" data-step="4" data-tab="partner">
+              <div class="auto__info-banner"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>Lifestyle and social factors for the spouse / partner.</div>
+              <div class="auto__panel-title">Spouse / Partner — Lifestyle &amp; Social</div>
+              <div class="auto__panel-desc">Lifestyle information for the spouse or partner relevant to their care.
+              </div>
+              <div class="auto__section-divider"><span>Substance Use</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Smoking Status</label><select class="auto__select">
+                    <option>Never smoked</option>
+                    <option>Current smoker</option>
+                    <option>Former smoker</option>
+                    <option>Occasional smoker</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Alcohol Consumption</label><select
+                    class="auto__select">
+                    <option>Never</option>
+                    <option>Social / Occasional</option>
+                    <option>Moderate</option>
+                    <option>Heavy (daily)</option>
+                    <option>Recovering</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Recreational Drug Use</label><select
+                    class="auto__select">
+                    <option>Never</option>
+                    <option>Past use only</option>
+                    <option>Current occasional</option>
+                    <option>Prefer not to say</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Exercise Frequency</label><select
+                    class="auto__select">
+                    <option>Sedentary (none)</option>
+                    <option>Light (1-2x/week)</option>
+                    <option>Moderate (3-4x/week)</option>
+                    <option>Active (5+ days/week)</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Diet</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Dietary Preference /
+                    Restrictions</label><select class="auto__select">
+                    <option>No restrictions</option>
+                    <option>Vegetarian</option>
+                    <option>Vegan</option>
+                    <option>Halaal</option>
+                    <option>Kosher</option>
+                    <option>Diabetic diet</option>
+                    <option>Other</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Occupation &amp; Employer</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Occupation / Job Title</label><input
+                    class="auto__input" type="text" /></div>
+                <div class="auto__field"><label class="auto__label">Housing Situation</label><select
+                    class="auto__select">
+                    <option>Own home</option>
+                    <option>Renting</option>
+                    <option>Living with family</option>
+                    <option>Informal settlement</option>
+                    <option>Other</option>
+                  </select></div>
+                <div class="auto__field auto__span-2">
+                  <label class="auto__label">Employer</label>
+                  <div id="cb_emp_s" class="auto__combo-wrap">
+                    <div class="auto__combo-input-row">
+                      <input type="text" placeholder="Search employer…" autocomplete="off"
+                        oninput="cbSearch(this,'employer','s')" onkeydown="cbKeyNav(event,'employer','s')"
+                        onfocus="cbFocus(this,'employer','s')" />
+                      <svg class="auto__combo-spin" id="cb_emp_s_spin" width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                        <path
+                          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                      </svg>
+                      <button class="auto__combo-clear-btn" id="cb_emp_s_clr" onclick="cbClear('employer','s')"
+                        aria-label="Clear">×</button>
+                    </div>
+                    <div class="auto__combo-drop" id="cb_emp_s_drop"></div>
+                    <div class="auto__combo-selected" id="cb_emp_s_sel"></div>
+                  </div>
+                </div>
+                <div class="auto__field"><label class="auto__label">Number of Dependants</label><input
+                    class="auto__input" type="number" min="0" max="20" placeholder="0" /></div>
+                <div class="auto__field"><label class="auto__label">Household Monthly Income</label><select
+                    class="auto__select">
+                    <option value="">Prefer not to say</option>
+                    <option>Under R5,000</option>
+                    <option>R5,001–R15,000</option>
+                    <option>R15,001–R30,000</option>
+                    <option>R30,001–R60,000</option>
+                    <option>Over R60,000</option>
+                  </select></div>
+              </div>
+              <div class="auto__section-divider"><span>Reproductive Health</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Pregnancy Status</label><select
+                    class="auto__select">
+                    <option>Not applicable</option>
+                    <option>Not pregnant</option>
+                    <option>Currently pregnant</option>
+                    <option>Postpartum (within 12 months)</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Contraceptive Use</label><select
+                    class="auto__select">
+                    <option>Not applicable</option>
+                    <option>None</option>
+                    <option>Oral contraceptive pill</option>
+                    <option>Injectable (Depo-Provera)</option>
+                    <option>IUD / Implant</option>
+                    <option>Condoms</option>
+                    <option>Sterilised</option>
+                  </select></div>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════
+     STEP 5  ·  INSURANCE & FINANCIAL
+════════════════════════════════════════════════════════ -->
+            <div class="auto__panel" data-step="5" data-tab="patient">
+              <div class="auto__panel-title">Insurance &amp; Financial Details</div>
+              <div class="auto__panel-desc">Medical aid, gap cover, and billing information for the patient.</div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Does the patient have medical aid /
+                    health insurance?</label>
+                  <div class="auto__radio-group">
+                    <label class="auto__radio-item"><input type="radio" name="p_has_aid" value="yes"
+                        onchange="toggleBlock('p_aid_block',this,true)"> Yes</label>
+                    <label class="auto__radio-item"><input type="radio" name="p_has_aid" value="no"
+                        onchange="toggleBlock('p_aid_block',this,false)" checked> No — Self-pay</label>
+                  </div>
+                </div>
+              </div>
+              <div id="p_aid_block" style="display:none">
+                <div class="auto__field-row">
+                  <div class="auto__field auto__span-2">
+                    <label class="auto__label">Search Medical Aid Scheme <span class="auto__required">*</span></label>
+                    <div id="cb_sch_p" class="auto__combo-wrap">
+                      <div class="auto__combo-input-row">
+                        <input type="text" placeholder="Type scheme name e.g. Discovery, Bonitas…" autocomplete="off"
+                          oninput="cbSearch(this,'scheme','p')" onkeydown="cbKeyNav(event,'scheme','p')"
+                          onfocus="cbFocus(this,'scheme','p')" />
+                        <svg class="auto__combo-spin" id="cb_sch_p_spin" width="16" height="16" viewBox="0 0 24 24"
+                          fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                          <path
+                            d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                        </svg>
+                        <button class="auto__combo-clear-btn" id="cb_sch_p_clr"
+                          onclick="cbClear('scheme','p');resetPlanSelect('p')" aria-label="Clear">×</button>
+                      </div>
+                      <div class="auto__combo-drop" id="cb_sch_p_drop"></div>
+                      <div class="auto__combo-selected" id="cb_sch_p_sel"></div>
+                    </div>
+                  </div>
+                  <div class="auto__field"><label class="auto__label">Plan / Option</label><select class="auto__select"
+                      id="p_plan_sel">
+                      <option value="">Select scheme first</option>
+                    </select></div>
+                  <div class="auto__field"><label class="auto__label">Membership Number <span
+                        class="auto__required">*</span></label><input class="auto__input" type="text"
+                      placeholder="e.g. 123456789" /></div>
+                  <div class="auto__field"><label class="auto__label">Dependant Code</label><input class="auto__input"
+                      type="text" placeholder="00 = main member, 01, 02…" /></div>
+                  <div class="auto__field"><label class="auto__label">Main Member Name (if different)</label><input
+                      class="auto__input" type="text" /></div>
+                </div>
+              </div>
+              <div class="auto__section-divider"><span>Gap Cover &amp; Life Insurance</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Gap Cover Provider</label><input class="auto__input"
+                    type="text" placeholder="e.g. Turnberry, Stratum" /></div>
+                <div class="auto__field"><label class="auto__label">Gap Cover Policy Number</label><input
+                    class="auto__input" type="text" /></div>
+                <div class="auto__field"><label class="auto__label">Life / Disability Insurer</label><input
+                    class="auto__input" type="text" placeholder="e.g. Old Mutual, Sanlam" /></div>
+                <div class="auto__field"><label class="auto__label">Policy Number</label><input class="auto__input"
+                    type="text" /></div>
+              </div>
+              <div class="auto__section-divider"><span>Billing Preferences</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Preferred Billing Method</label><select
+                    class="auto__select">
+                    <option>Medical Aid direct claim</option>
+                    <option>Self-pay — EFT</option>
+                    <option>Self-pay — Card</option>
+                    <option>Self-pay — Cash</option>
+                    <option>Corporate Account</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Invoice / Statement Email</label><input
+                    class="auto__input" type="email" placeholder="billing@example.com" /></div>
+              </div>
+            </div>
+
+            <div class="auto__panel" data-step="5" data-tab="partner">
+              <div class="auto__info-banner"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>Insurance and billing details for the spouse / partner.</div>
+              <div class="auto__panel-title">Spouse / Partner — Insurance &amp; Financial</div>
+              <div class="auto__panel-desc">Medical aid and billing information for the spouse or partner.</div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2"><label class="auto__label">Does the spouse/partner have medical
+                    aid?</label>
+                  <div class="auto__radio-group">
+                    <label class="auto__radio-item"><input type="radio" name="s_has_aid" value="yes"
+                        onchange="toggleBlock('s_aid_block',this,true)"> Yes</label>
+                    <label class="auto__radio-item"><input type="radio" name="s_has_aid" value="no"
+                        onchange="toggleBlock('s_aid_block',this,false)" checked> No — Self-pay</label>
+                  </div>
+                </div>
+              </div>
+              <div id="s_aid_block" style="display:none">
+                <div class="auto__field-row">
+                  <div class="auto__field auto__span-2">
+                    <label class="auto__label">Search Medical Aid Scheme</label>
+                    <div id="cb_sch_s" class="auto__combo-wrap">
+                      <div class="auto__combo-input-row">
+                        <input type="text" placeholder="Type scheme name…" autocomplete="off"
+                          oninput="cbSearch(this,'scheme','s')" onkeydown="cbKeyNav(event,'scheme','s')"
+                          onfocus="cbFocus(this,'scheme','s')" />
+                        <svg class="auto__combo-spin" id="cb_sch_s_spin" width="16" height="16" viewBox="0 0 24 24"
+                          fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true">
+                          <path
+                            d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                        </svg>
+                        <button class="auto__combo-clear-btn" id="cb_sch_s_clr"
+                          onclick="cbClear('scheme','s');resetPlanSelect('s')" aria-label="Clear">×</button>
+                      </div>
+                      <div class="auto__combo-drop" id="cb_sch_s_drop"></div>
+                      <div class="auto__combo-selected" id="cb_sch_s_sel"></div>
+                    </div>
+                  </div>
+                  <div class="auto__field"><label class="auto__label">Plan / Option</label><select class="auto__select"
+                      id="s_plan_sel">
+                      <option value="">Select scheme first</option>
+                    </select></div>
+                  <div class="auto__field"><label class="auto__label">Membership Number</label><input
+                      class="auto__input" type="text" /></div>
+                  <div class="auto__field"><label class="auto__label">Dependant Code</label><input class="auto__input"
+                      type="text" /></div>
+                  <div class="auto__field"><label class="auto__label">Main Member Name</label><input class="auto__input"
+                      type="text" /></div>
+                </div>
+              </div>
+              <div class="auto__section-divider"><span>Gap Cover</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Gap Cover Provider</label><input class="auto__input"
+                    type="text" /></div>
+                <div class="auto__field"><label class="auto__label">Gap Cover Policy Number</label><input
+                    class="auto__input" type="text" /></div>
+              </div>
+              <div class="auto__section-divider"><span>Billing Preferences</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Preferred Billing Method</label><select
+                    class="auto__select">
+                    <option>Medical Aid direct claim</option>
+                    <option>Self-pay — EFT</option>
+                    <option>Self-pay — Card</option>
+                    <option>Self-pay — Cash</option>
+                  </select></div>
+                <div class="auto__field"><label class="auto__label">Invoice Email</label><input class="auto__input"
+                    type="email" /></div>
+              </div>
+            </div>
+
+            <!-- ════════════════════════════════════════════════════════
+     STEP 6  ·  EMERGENCY CONTACTS & CONSENT
+════════════════════════════════════════════════════════ -->
+            <div class="auto__panel" data-step="6" data-tab="patient">
+              <div class="auto__panel-title">Emergency Contacts &amp; Consent</div>
+              <div class="auto__panel-desc">People to contact in a medical emergency. At least one contact is required.
+              </div>
+              <div style="border:1px solid #e4e7ec;border-radius:4px;padding:16px;margin-bottom:14px">
+                <div
+                  style="font-size:11px;font-weight:600;color:#8a94a6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+                  Primary Emergency Contact</div>
+                <div class="auto__field-row">
+                  <div class="auto__field"><label class="auto__label">Full Name <span
+                        class="auto__required">*</span></label><input class="auto__input" type="text"
+                      placeholder="e.g. Thandi Mokoena" /></div>
+                  <div class="auto__field"><label class="auto__label">Relationship <span
+                        class="auto__required">*</span></label><select class="auto__select">
+                      <option value="">Select</option>
+                      <option>Spouse / Partner</option>
+                      <option>Parent</option>
+                      <option>Child</option>
+                      <option>Sibling</option>
+                      <option>Friend</option>
+                      <option>Colleague</option>
+                      <option>Guardian</option>
+                      <option>Other</option>
+                    </select></div>
+                  <div class="auto__field"><label class="auto__label">Mobile Number <span
+                        class="auto__required">*</span></label><input class="auto__input" type="tel"
+                      placeholder="+27 82 000 0000" /></div>
+                  <div class="auto__field"><label class="auto__label">Home / Work Phone</label><input
+                      class="auto__input" type="tel" /></div>
+                  <div class="auto__field auto__span-2"><label class="auto__label">Email Address</label><input
+                      class="auto__input" type="email" /></div>
+                </div>
+              </div>
+              <div style="border:1px solid #e4e7ec;border-radius:4px;padding:16px;margin-bottom:14px">
+                <div
+                  style="font-size:11px;font-weight:600;color:#8a94a6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+                  Secondary Emergency Contact (Optional)</div>
+                <div class="auto__field-row">
+                  <div class="auto__field"><label class="auto__label">Full Name</label><input class="auto__input"
+                      type="text" /></div>
+                  <div class="auto__field"><label class="auto__label">Relationship</label><select class="auto__select">
+                      <option value="">Select</option>
+                      <option>Spouse / Partner</option>
+                      <option>Parent</option>
+                      <option>Child</option>
+                      <option>Sibling</option>
+                      <option>Friend</option>
+                      <option>Other</option>
+                    </select></div>
+                  <div class="auto__field"><label class="auto__label">Mobile Number</label><input class="auto__input"
+                      type="tel" /></div>
+                  <div class="auto__field"><label class="auto__label">Email Address</label><input class="auto__input"
+                      type="email" /></div>
+                </div>
+              </div>
+              <div class="auto__section-divider"><span>Consent &amp; Authorisation</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <div class="auto__check-group" style="flex-direction:column;gap:12px">
+                    <label class="auto__check-item"><input type="checkbox"> <span>I consent to receive medical treatment
+                        and for details to be recorded in my patient file. <span
+                          class="auto__required">*</span></span></label>
+                    <label class="auto__check-item"><input type="checkbox"> <span>I consent to collection, processing,
+                        and storage of my personal and health data in compliance with POPIA. <span
+                          class="auto__required">*</span></span></label>
+                    <label class="auto__check-item"><input type="checkbox"> <span>I authorise this practice to submit
+                        claims to my medical aid on my behalf and agree to pay any outstanding amounts. <span
+                          class="auto__required">*</span></span></label>
+                    <label class="auto__check-item"><input type="checkbox"> <span>I authorise named emergency contacts
+                        to receive information about my condition in an emergency.</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="auto__section-divider"><span>Patient Signature</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field"><label class="auto__label">Patient / Guardian Signature (Full Name) <span
+                      class="auto__required">*</span></label><input class="auto__input" type="text"
+                    placeholder="Type full name as signature" /></div>
+                <div class="auto__field"><label class="auto__label">Date</label><input class="auto__input" type="date"
+                    id="p_sign_date" /></div>
+              </div>
+            </div>
+
+            <div class="auto__panel" data-step="6" data-tab="partner">
+              <div class="auto__info-banner"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>Emergency contacts and consent for the spouse / partner.</div>
+              <div class="auto__panel-title">Spouse / Partner — Emergency Contacts &amp; Consent</div>
+              <div class="auto__panel-desc">Emergency contact and consent details for the spouse or partner.</div>
+              <div style="border:1px solid #e4e7ec;border-radius:4px;padding:16px;margin-bottom:14px">
+                <div
+                  style="font-size:11px;font-weight:600;color:#8a94a6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+                  Primary Emergency Contact</div>
+                <div class="auto__field-row">
+                  <div class="auto__field"><label class="auto__label">Full Name</label><input class="auto__input"
+                      type="text" /></div>
+                  <div class="auto__field"><label class="auto__label">Relationship</label><select class="auto__select">
+                      <option value="">Select</option>
+                      <option>Spouse</option>
+                      <option>Parent</option>
+                      <option>Child</option>
+                      <option>Sibling</option>
+                      <option>Friend</option>
+                      <option>Other</option>
+                    </select></div>
+                  <div class="auto__field"><label class="auto__label">Mobile Number</label><input class="auto__input"
+                      type="tel" /></div>
+                  <div class="auto__field"><label class="auto__label">Home / Work Phone</label><input
+                      class="auto__input" type="tel" /></div>
+                  <div class="auto__field auto__span-2"><label class="auto__label">Email Address</label><input
+                      class="auto__input" type="email" /></div>
+                </div>
+              </div>
+              <div class="auto__section-divider"><span>Consent &amp; Signature</span></div>
+              <div class="auto__field-row">
+                <div class="auto__field auto__span-2">
+                  <div class="auto__check-group" style="flex-direction:column;gap:12px">
+                    <label class="auto__check-item"><input type="checkbox"> <span>Spouse/partner consents to receive
+                        medical treatment and for details to be recorded. <span
+                          class="auto__required">*</span></span></label>
+                    <label class="auto__check-item"><input type="checkbox"> <span>Spouse/partner consents to
+                        POPIA-compliant collection and processing of their health data. <span
+                          class="auto__required">*</span></span></label>
+                    <label class="auto__check-item"><input type="checkbox"> <span>Spouse/partner authorises medical aid
+                        claims submission on their behalf.</span></label>
+                  </div>
+                </div>
+                <div class="auto__field"><label class="auto__label">Spouse / Partner Signature (Full Name)</label><input
+                    class="auto__input" type="text" placeholder="Type full name as signature" /></div>
+                <div class="auto__field"><label class="auto__label">Date</label><input class="auto__input" type="date"
+                    id="s_sign_date" /></div>
+              </div>
+            </div>
+
+          </div><!-- /panels -->
+
+          <!-- Success screen -->
+          <div class="auto__success-screen" id="auto__success">
+            <div class="auto__success-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a7a5e"
+                stroke-width="2.5" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg></div>
+            <div class="auto__success-title">Registration Complete</div>
+            <div class="auto__success-sub">The patient intake form has been submitted successfully. A confirmation will
+              be sent to the registered email address.</div>
+            <div class="auto__ref-num" id="auto__ref"></div>
+            <button class="auto__btn auto__btn-primary" style="margin-top:24px" onclick="closeModal()">Close</button>
+          </div>
+
+        </div><!-- /auto__main -->
+      </div><!-- /auto__body -->
+
+      <!-- ── FOOTER ── -->
+      <div class="auto__footer" id="auto__footer">
+        <div class="auto__footer-left">
+          <button class="auto__btn auto__btn-ghost" id="auto__prev-btn" onclick="prevStep()" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <polyline points="15 18 9 12 15 6" />
+            </svg> Previous
+          </button>
+          <span class="auto__footer-step-info" id="auto__step-info">Section 1 of 7</span>
+        </div>
+        <div class="auto__footer-right">
+          <button class="auto__btn auto__btn-ghost" onclick="saveDraft()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            Save Draft
+          </button>
+          <button class="auto__btn auto__btn-success" id="auto__submit-btn" style="display:none" onclick="submitForm()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg> Submit Registration
+          </button>
+          <button class="auto__btn auto__btn-primary" id="auto__next-btn" onclick="nextStep()">
+            Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /auto__modal -->
+  </div><!-- /auto__overlay -->
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════
+       MOCK API DATA  — simulates backend search responses
+    ═══════════════════════════════════════════════════════════ */
+    const API = {
+      patients: [
+        { id: 'PAT-001', title: 'Mr', first_name: 'Sipho', middle_name: 'Thabo', last_name: 'Dlamini', preferred_name: 'Sipho', dob: '1985-03-14', gender: 'Male', nationality: 'South African', id_number: '8503145678082', id_type: 'South African ID', marital_status: 'married', race: 'African / Black', language: 'isiZulu', mobile: '+27 82 456 7890', alt_phone: '+27 11 234 5678', email: 'sipho.dlamini@email.co.za', street: '14 Umkhondo Street, Unit 2B', suburb: 'Soweto', city: 'Johannesburg', province: 'Gauteng', postal_code: '1804' },
+        { id: 'PAT-002', title: 'Mrs', first_name: 'Nomvula', middle_name: '', last_name: 'Khumalo', preferred_name: 'Nomvula', dob: '1990-07-22', gender: 'Female', nationality: 'South African', id_number: '9007225432086', id_type: 'South African ID', marital_status: 'married', race: 'African / Black', language: 'isiZulu', mobile: '+27 73 321 9876', alt_phone: '', email: 'nomvula.khumalo@gmail.com', street: '88 Hlongwane Avenue', suburb: 'Umlazi', city: 'Durban', province: 'KwaZulu-Natal', postal_code: '4031' },
+        { id: 'PAT-003', title: 'Dr', first_name: 'Pieter', middle_name: 'Johan', last_name: 'van der Merwe', preferred_name: 'Pieter', dob: '1978-11-05', gender: 'Male', nationality: 'South African', id_number: '7811055187087', id_type: 'South African ID', marital_status: 'married', race: 'White', language: 'Afrikaans', mobile: '+27 83 112 3344', alt_phone: '+27 21 887 4400', email: 'pjvdmerwe@medpro.co.za', street: '3 Protea Lane', suburb: 'Stellenbosch', city: 'Stellenbosch', province: 'Western Cape', postal_code: '7600' },
+        { id: 'PAT-004', title: 'Ms', first_name: 'Fatima', middle_name: 'Ayesha', last_name: 'Patel', preferred_name: 'Fati', dob: '1995-02-18', gender: 'Female', nationality: 'South African', id_number: '9502180432080', id_type: 'South African ID', marital_status: 'single', race: 'Indian / Asian', language: 'English', mobile: '+27 76 555 4433', alt_phone: '', email: 'fatima.patel@outlook.com', street: '22 Gandhi Road, Apt 5', suburb: 'Lenasia', city: 'Johannesburg', province: 'Gauteng', postal_code: '1820' },
+        { id: 'PAT-005', title: 'Mr', first_name: 'Thabo', middle_name: '', last_name: 'Mokoena', preferred_name: 'Thabo', dob: '1982-09-30', gender: 'Male', nationality: 'South African', id_number: '8209305567083', id_type: 'South African ID', marital_status: 'divorced', race: 'African / Black', language: 'Setswana', mobile: '+27 79 888 2211', alt_phone: '', email: 'thabo.mokoena@yahoo.com', street: '7 Khumalo Street', suburb: 'Mamelodi', city: 'Pretoria', province: 'Gauteng', postal_code: '0122' },
+        { id: 'PAT-006', title: 'Mrs', first_name: 'Liesl', middle_name: 'Marie', last_name: 'Botha', preferred_name: 'Liesl', dob: '1988-06-12', gender: 'Female', nationality: 'South African', id_number: '8806125187084', id_type: 'South African ID', marital_status: 'married', race: 'White', language: 'Afrikaans', mobile: '+27 82 774 5566', alt_phone: '+27 44 691 2200', email: 'liesl.botha@telkomsa.net', street: '19 Fynbos Road', suburb: 'George', city: 'George', province: 'Western Cape', postal_code: '6530' },
+        { id: 'PAT-007', title: 'Mr', first_name: 'Vusi', middle_name: 'Emmanuel', last_name: 'Shabalala', preferred_name: 'Vusi', dob: '1975-12-01', gender: 'Male', nationality: 'South African', id_number: '7512015432089', id_type: 'South African ID', marital_status: 'widowed', race: 'African / Black', language: 'isiZulu', mobile: '+27 71 222 9900', alt_phone: '', email: 'vusi.shabalala@mweb.co.za', street: '45 Inkosi Luthuli Drive', suburb: 'KwaMashu', city: 'Durban', province: 'KwaZulu-Natal', postal_code: '4360' },
+        { id: 'PAT-008', title: 'Miss', first_name: 'Amara', middle_name: '', last_name: 'Okafor', preferred_name: 'Amara', dob: '2001-04-07', gender: 'Female', nationality: 'Other African', id_number: 'A12345678', id_type: 'Passport', marital_status: 'single', race: 'African / Black', language: 'English', mobile: '+27 68 333 1122', alt_phone: '', email: 'amara.okafor@student.wits.ac.za', street: 'Wits University, Residence Block C', suburb: 'Braamfontein', city: 'Johannesburg', province: 'Gauteng', postal_code: '2000' }
+      ],
+      doctors: [
+        { id: 'DOC-001', name: 'Dr Aisha Mokoena', specialty: 'General Practitioner', practice: 'HealthFirst Medical Centre', hpcsa: 'MP0123456', phone: '+27 11 786 4400', address: '12 Jan Smuts Ave, Rosebank, JHB' },
+        { id: 'DOC-002', name: 'Dr Hendrik Steyn', specialty: 'General Practitioner', practice: 'Steyn Family Practice', hpcsa: 'MP0234567', phone: '+27 21 914 3300', address: '7 Plein Street, Bellville, Cape Town' },
+        { id: 'DOC-003', name: 'Dr Priya Naidoo', specialty: 'Internist', practice: 'Durban Medical Associates', hpcsa: 'MP0345678', phone: '+27 31 260 5500', address: '33 Marine Parade, Durban' },
+        { id: 'DOC-004', name: 'Dr James Tlou', specialty: 'General Practitioner', practice: 'Community Health Clinic', hpcsa: 'MP0456789', phone: '+27 12 326 7700', address: '5 Church Street, Pretoria Central' },
+        { id: 'DOC-005', name: 'Dr Sarah van Rooyen', specialty: 'Paediatrician', practice: 'Little Hearts Paediatric Clinic', hpcsa: 'MP0567890', phone: '+27 41 373 8800', address: '88 Cape Road, Port Elizabeth' },
+        { id: 'DOC-006', name: 'Dr Mohammed Hoosen', specialty: 'Cardiologist', practice: 'Heart & Vascular Institute', hpcsa: 'MP0678901', phone: '+27 31 580 9900', address: 'Netcare St Augustine\'s, Durban' },
+        { id: 'DOC-007', name: 'Prof Lungile Dube', specialty: 'Oncologist', practice: 'Charlotte Maxeke Academic Hospital', hpcsa: 'MP0789012', phone: '+27 11 488 3911', address: '7 York Road, Parktown, JHB' },
+        { id: 'DOC-008', name: 'Dr Elzanne Fourie', specialty: 'General Practitioner', practice: 'MedVille Practice', hpcsa: 'MP0890123', phone: '+27 53 832 6600', address: '2 Warren Road, Kimberley' }
+      ],
+      medications: [
+        { id: 'MED-001', name: 'Metformin', type: 'Prescription', category: 'Antidiabetic', dosages: ['500mg', '850mg', '1000mg'], freq: 'Twice daily' },
+        { id: 'MED-002', name: 'Amlodipine', type: 'Prescription', category: 'Antihypertensive', dosages: ['5mg', '10mg'], freq: 'Once daily' },
+        { id: 'MED-003', name: 'Atorvastatin', type: 'Prescription', category: 'Statin', dosages: ['10mg', '20mg', '40mg', '80mg'], freq: 'Once daily (evening)' },
+        { id: 'MED-004', name: 'Aspirin', type: 'OTC / Prescription', category: 'Antiplatelet / Analgesic', dosages: ['75mg', '100mg', '300mg', '500mg'], freq: 'Once daily' },
+        { id: 'MED-005', name: 'Lisinopril', type: 'Prescription', category: 'ACE Inhibitor', dosages: ['5mg', '10mg', '20mg'], freq: 'Once daily' },
+        { id: 'MED-006', name: 'Omeprazole', type: 'Prescription', category: 'Proton Pump Inhibitor', dosages: ['10mg', '20mg', '40mg'], freq: 'Once daily before meals' },
+        { id: 'MED-007', name: 'Salbutamol Inhaler', type: 'Prescription', category: 'Bronchodilator', dosages: ['100mcg/puff'], freq: 'As needed' },
+        { id: 'MED-008', name: 'Prednisone', type: 'Prescription', category: 'Corticosteroid', dosages: ['5mg', '10mg', '20mg', '30mg'], freq: 'Once daily (morning)' },
+        { id: 'MED-009', name: 'Fluoxetine', type: 'Prescription', category: 'Antidepressant (SSRI)', dosages: ['10mg', '20mg', '40mg'], freq: 'Once daily' },
+        { id: 'MED-010', name: 'Tenofovir / Emtricitabine', type: 'Prescription', category: 'Antiretroviral (ARV)', dosages: ['300mg/200mg'], freq: 'Once daily' },
+        { id: 'MED-011', name: 'Dolutegravir (DTG)', type: 'Prescription', category: 'Antiretroviral (ARV)', dosages: ['50mg'], freq: 'Once daily' },
+        { id: 'MED-012', name: 'Rifampicin', type: 'Prescription', category: 'Antibiotic (TB)', dosages: ['150mg', '300mg', '600mg'], freq: 'Once daily (fasting)' },
+        { id: 'MED-013', name: 'Ibuprofen', type: 'OTC', category: 'NSAID', dosages: ['200mg', '400mg', '600mg'], freq: 'Three times daily with food' },
+        { id: 'MED-014', name: 'Paracetamol', type: 'OTC', category: 'Analgesic / Antipyretic', dosages: ['500mg', '1000mg'], freq: 'As needed (max 4/day)' },
+        { id: 'MED-015', name: 'Warfarin', type: 'Prescription', category: 'Anticoagulant', dosages: ['1mg', '2mg', '5mg'], freq: 'Once daily' },
+        { id: 'MED-016', name: 'Levothyroxine', type: 'Prescription', category: 'Thyroid Hormone', dosages: ['25mcg', '50mcg', '100mcg'], freq: 'Once daily (fasting)' },
+        { id: 'MED-017', name: 'Insulin Glargine', type: 'Prescription', category: 'Insulin (Long-acting)', dosages: ['Dose titrated by physician'], freq: 'Once daily at bedtime' },
+        { id: 'MED-018', name: 'Cetirizine', type: 'OTC', category: 'Antihistamine', dosages: ['5mg', '10mg'], freq: 'Once daily' }
+      ],
+      employers: [
+        { id: 'EMP-001', name: 'Department of Education', type: 'Government', sector: 'Public Sector' },
+        { id: 'EMP-002', name: 'Department of Health', type: 'Government', sector: 'Public Sector' },
+        { id: 'EMP-003', name: 'South African Police Service (SAPS)', type: 'Government', sector: 'Public Sector' },
+        { id: 'EMP-004', name: 'Eskom', type: 'State-Owned Enterprise', sector: 'Energy' },
+        { id: 'EMP-005', name: 'Transnet', type: 'State-Owned Enterprise', sector: 'Transport & Logistics' },
+        { id: 'EMP-006', name: 'Standard Bank', type: 'Private', sector: 'Financial Services' },
+        { id: 'EMP-007', name: 'FirstRand / FNB', type: 'Private', sector: 'Financial Services' },
+        { id: 'EMP-008', name: 'Absa Group', type: 'Private', sector: 'Financial Services' },
+        { id: 'EMP-009', name: 'Nedbank', type: 'Private', sector: 'Financial Services' },
+        { id: 'EMP-010', name: 'Shoprite / Checkers', type: 'Private', sector: 'Retail' },
+        { id: 'EMP-011', name: 'Pick n Pay', type: 'Private', sector: 'Retail' },
+        { id: 'EMP-012', name: 'Woolworths Holdings', type: 'Private', sector: 'Retail' },
+        { id: 'EMP-013', name: 'Sasol', type: 'Private / SOE', sector: 'Energy & Chemicals' },
+        { id: 'EMP-014', name: 'Anglo American', type: 'Private', sector: 'Mining' },
+        { id: 'EMP-015', name: 'Sibanye-Stillwater', type: 'Private', sector: 'Mining' },
+        { id: 'EMP-016', name: 'MTN Group', type: 'Private', sector: 'Telecommunications' },
+        { id: 'EMP-017', name: 'Vodacom', type: 'Private', sector: 'Telecommunications' },
+        { id: 'EMP-018', name: 'Telkom SA', type: 'Private / SOE', sector: 'Telecommunications' },
+        { id: 'EMP-019', name: 'Netcare Group', type: 'Private', sector: 'Healthcare' },
+        { id: 'EMP-020', name: 'Life Healthcare', type: 'Private', sector: 'Healthcare' },
+        { id: 'EMP-021', name: 'Mediclinic International', type: 'Private', sector: 'Healthcare' },
+        { id: 'EMP-022', name: 'Discovery Limited', type: 'Private', sector: 'Financial Services / Insurance' },
+        { id: 'EMP-023', name: 'Old Mutual', type: 'Private', sector: 'Financial Services / Insurance' },
+        { id: 'EMP-024', name: 'Sanlam', type: 'Private', sector: 'Financial Services / Insurance' },
+        { id: 'EMP-025', name: 'University of the Witwatersrand', type: 'Public', sector: 'Higher Education' },
+        { id: 'EMP-026', name: 'University of Cape Town', type: 'Public', sector: 'Higher Education' },
+        { id: 'EMP-027', name: 'Self-employed / Freelance', type: 'Self', sector: 'Various' },
+        { id: 'EMP-028', name: 'Unemployed / Not working', type: 'None', sector: 'N/A' }
+      ],
+      schemes: [
+        { id: 'SCH-001', name: 'Discovery Health', code: 'DISC', plans: ['KeyCare Start', 'KeyCare Plus', 'KeyCare Core', 'Essential Smart', 'Classic Smart', 'Classic Delta', 'Classic', 'Executive', 'Comprehensive'] },
+        { id: 'SCH-002', name: 'Bonitas', code: 'BONI', plans: ['BonStart', 'BonEssential', 'BonCap', 'BonCare', 'BonComplete', 'BonClassic', 'Standard Select', 'Standard'] },
+        { id: 'SCH-003', name: 'Momentum Health', code: 'MMTM', plans: ['Ingwe', 'Evolve', 'Custom', 'Custom Delta', 'Incentive Plus', 'Summit', 'Summit Plus'] },
+        { id: 'SCH-004', name: 'Medihelp', code: 'MDHL', plans: ['Dimension', 'Necesse', 'Prime', 'Medphila', 'Medicore', 'Medplus', 'Maxima Core'] },
+        { id: 'SCH-005', name: 'Bestmed', code: 'BEST', plans: ['Beat1', 'Beat2', 'Beat3', 'Beat4', 'Pace1', 'Pace2', 'Pace3', 'Pace4'] },
+        { id: 'SCH-006', name: 'Fedhealth', code: 'FEDH', plans: ['myFED', 'Elect1', 'Elect2', 'Elect3', 'Maxima', 'Maxima Exec'] },
+        { id: 'SCH-007', name: 'GEMS', code: 'GEMS', plans: ['Emerald', 'Emerald Value', 'Beryl', 'Onyx', 'Ruby', 'Sapphire'] },
+        { id: 'SCH-008', name: 'Polmed', code: 'POLM', plans: ['Standard', 'Plus', 'Select', 'Premium'] },
+        { id: 'SCH-009', name: 'Hosmed', code: 'HOSM', plans: ['Basic', 'Saver', 'Standard', 'Balanced', 'Comprehensive'] },
+        { id: 'SCH-010', name: 'Liberty Medical Scheme', code: 'LBTY', plans: ['Core', 'Plus', 'Summit'] },
+        { id: 'SCH-011', name: 'Sizwe Hosmed', code: 'SIZW', plans: ['Fundamental', 'Standard', 'Savvy', 'Supreme'] },
+        { id: 'SCH-012', name: 'Compcare', code: 'COMP', plans: ['Network Uno', 'Network Ultra', 'Unlimited'] }
+      ]
+    };
+
+    /* Simulated API search with 200ms latency */
+    function apiSearch(type, q) {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          q = q.toLowerCase().trim();
+          let res = [];
+          if (type === 'patient') {
+            res = API.patients.filter(p =>
+              (p.first_name + ' ' + p.last_name).toLowerCase().includes(q) ||
+              p.id_number.toLowerCase().includes(q) ||
+              p.email.toLowerCase().includes(q) ||
+              p.id.toLowerCase().includes(q)
+            );
+          } else if (type === 'doctor') {
+            res = API.doctors.filter(d =>
+              d.name.toLowerCase().includes(q) ||
+              d.practice.toLowerCase().includes(q) ||
+              d.specialty.toLowerCase().includes(q) ||
+              d.hpcsa.toLowerCase().includes(q)
+            );
+          } else if (type === 'medication') {
+            res = API.medications.filter(m =>
+              m.name.toLowerCase().includes(q) ||
+              m.category.toLowerCase().includes(q) ||
+              m.type.toLowerCase().includes(q)
+            );
+          } else if (type === 'employer') {
+            res = API.employers.filter(e =>
+              e.name.toLowerCase().includes(q) ||
+              e.sector.toLowerCase().includes(q) ||
+              e.type.toLowerCase().includes(q)
+            );
+          } else if (type === 'scheme') {
+            res = API.schemes.filter(s =>
+              s.name.toLowerCase().includes(q) ||
+              s.code.toLowerCase().includes(q)
+            );
+          }
+          resolve(res.slice(0, 8));
+        }, 200);
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       COMBOBOX ENGINE
+    ═══════════════════════════════════════════════════════════ */
+    const cbTimers = {}, cbFocusIdx = {}, cbSelected = {};
+
+    function cbId(type, ctx) {
+      const t = type === 'medication' ? 'med' : type.substring(0, 3);
+      return `cb_${t}_${ctx}`;
+    }
+
+    function cbSearch(input, type, ctx) {
+      const id = cbId(type, ctx);
+      const q = input.value.trim();
+      const clr = document.getElementById(id + '_clr');
+      if (clr) clr.classList.toggle('auto__visible', q.length > 0);
+      if (q.length < 2) { cbCloseDrop(id); return; }
+      const spin = document.getElementById(id + '_spin');
+      if (spin) spin.classList.add('auto__visible');
+      clearTimeout(cbTimers[id]);
+      cbTimers[id] = setTimeout(async () => {
+        const results = await apiSearch(type, q);
+        if (spin) spin.classList.remove('auto__visible');
+        cbRenderDrop(id, type, ctx, results, q);
+      }, 280);
+    }
+
+    function cbRenderDrop(id, type, ctx, results, query) {
+      const drop = document.getElementById(id + '_drop');
+      if (!drop) return;
+      cbFocusIdx[id] = -1;
+      let html = '';
+      if (results.length === 0) {
+        html = `<div class="auto__combo-no-results">No records found for "<strong>${esc(query)}</strong>"</div>`;
+      } else {
+        html = results.map((item, i) => cbRenderItem(type, ctx, item, i)).join('');
+      }
+      const createLabel = results.length === 0 ? `Create new record for "${esc(query)}"` : `Can't find it? Create new`;
+      html += `<div class="auto__combo-create" onclick="cbCreateNew('${type}','${ctx}','${esc(query).replace(/'/g, "\\'")}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>${createLabel}</div>`;
+      drop.innerHTML = html;
+      drop.classList.add('auto__visible');
+    }
+
+    function cbRenderItem(type, ctx, item, i) {
+      let icon = '', name = '', sub = '', badge = '';
+      if (type === 'patient') {
+        const ini = (item.first_name[0] || '') + (item.last_name[0] || '');
+        icon = `<div class="auto__ci-icon auto__icon-patient">${ini}</div>`;
+        name = `${item.title} ${item.first_name} ${item.last_name}`;
+        sub = `${item.id_number} · ${item.gender}, ${age(item.dob)} yrs · ${item.city}`;
+        badge = `<span class="auto__ci-badge auto__badge-existing">${item.id}</span>`;
+      } else if (type === 'doctor') {
+        const ini = item.name.split(' ').filter(w => w.length > 2).map(w => w[0]).slice(0, 2).join('');
+        icon = `<div class="auto__ci-icon auto__icon-doctor">${ini}</div>`;
+        name = item.name; sub = `${item.specialty} · ${item.practice}`;
+        badge = `<span class="auto__ci-badge auto__badge-existing">${item.hpcsa}</span>`;
+      } else if (type === 'medication') {
+        icon = `<div class="auto__ci-icon auto__icon-med">Rx</div>`;
+        name = item.name; sub = `${item.category} · ${item.type} · Typical: ${item.freq}`;
+        badge = `<span class="auto__ci-badge auto__badge-existing">${item.id}</span>`;
+      } else if (type === 'employer') {
+        const ini = item.name.split(/\s+/).filter(w => w.length > 2).map(w => w[0]).slice(0, 2).join('') || 'Co';
+        icon = `<div class="auto__ci-icon auto__icon-employer">${ini}</div>`;
+        name = item.name; sub = `${item.type} · ${item.sector}`;
+        badge = `<span class="auto__ci-badge auto__badge-existing">${item.id}</span>`;
+      } else if (type === 'scheme') {
+        icon = `<div class="auto__ci-icon auto__icon-scheme">${item.code}</div>`;
+        name = item.name; sub = `${item.plans.length} plan options`;
+        badge = `<span class="auto__ci-badge auto__badge-existing">${item.id}</span>`;
+      }
+      const safeItem = esc(JSON.stringify(item)).replace(/&quot;/g, '"');
+      return `<div class="auto__combo-item" data-index="${i}" data-item='${JSON.stringify(item).replace(/'/g, '&#39;')}' onclick="cbSelect('${type}','${ctx}',this)">
+    ${icon}<div class="auto__ci-body"><div class="auto__ci-name">${esc(name)}</div><div class="auto__ci-sub">${esc(sub)}</div></div>${badge}</div>`;
+    }
+
+    function cbSelect(type, ctx, el) {
+      const item = JSON.parse(el.getAttribute('data-item'));
+      const id = cbId(type, ctx);
+      cbSelected[id] = item;
+      cbCloseDrop(id);
+      // Hide text input, show selected card
+      const inputEl = document.querySelector(`#${id} .auto__combo-input-row input`);
+      if (inputEl) { inputEl.value = ''; inputEl.style.display = 'none'; }
+      const clr = document.getElementById(id + '_clr');
+      if (clr) clr.classList.remove('auto__visible');
+      cbShowCard(id, type, ctx, item);
+      cbAutoFill(type, ctx, item);
+    }
+
+    function cbShowCard(id, type, ctx, item) {
+      const card = document.getElementById(id + '_sel');
+      if (!card) return;
+      let name = '', detail = '', idStr = '';
+      if (type === 'patient') {
+        name = `${item.title} ${item.first_name} ${item.last_name}`; idStr = item.id;
+        detail = `ID: ${item.id_number} · ${item.gender} · DOB: ${item.dob} · ${item.city}, ${item.province}`;
+      } else if (type === 'doctor') {
+        name = item.name; idStr = item.hpcsa;
+        detail = `${item.specialty} · ${item.practice} · ${item.phone} · ${item.address}`;
+      } else if (type === 'medication') {
+        name = item.name; idStr = item.id;
+        detail = `${item.category} · ${item.type} · Dosages: ${item.dosages.join(', ')} · Usual frequency: ${item.freq}`;
+      } else if (type === 'employer') {
+        name = item.name; idStr = item.id;
+        detail = `${item.type} · ${item.sector}`;
+      } else if (type === 'scheme') {
+        name = item.name; idStr = item.code;
+        detail = `Plans available: ${item.plans.slice(0, 5).join(', ')}${item.plans.length > 5 ? ' …' : ''}`;
+      }
+      card.innerHTML = `<div class="auto__combo-sel-header">
+    <span class="auto__combo-sel-name">${esc(name)}</span>
+    <span class="auto__combo-sel-id">${esc(idStr)}</span>
+    <button class="auto__combo-deselect" onclick="cbClear('${type}','${ctx}')" title="Clear selection" aria-label="Clear selection">×</button>
+  </div><div class="auto__combo-sel-detail">${esc(detail)}</div>`;
+      card.classList.add('auto__visible');
+    }
+
+    function cbClear(type, ctx) {
+      const id = cbId(type, ctx);
+      delete cbSelected[id];
+      const inputEl = document.querySelector(`#${id} .auto__combo-input-row input`);
+      if (inputEl) { inputEl.value = ''; inputEl.style.display = ''; inputEl.focus(); }
+      const clr = document.getElementById(id + '_clr'); if (clr) clr.classList.remove('auto__visible');
+      const card = document.getElementById(id + '_sel'); if (card) { card.classList.remove('auto__visible'); card.innerHTML = ''; }
+      cbCloseDrop(id);
+    }
+
+    function cbCloseDrop(id) {
+      const d = document.getElementById(id + '_drop');
+      if (d) { d.classList.remove('auto__visible'); d.innerHTML = ''; }
+    }
+
+    function cbFocus(input, type, ctx) {
+      if (input.value.trim().length >= 2) cbSearch(input, type, ctx);
+    }
+
+    function cbKeyNav(e, type, ctx) {
+      const id = cbId(type, ctx);
+      const drop = document.getElementById(id + '_drop');
+      if (!drop || !drop.classList.contains('auto__visible')) return;
+      const items = drop.querySelectorAll('.auto__combo-item');
+      let idx = cbFocusIdx[id] ?? -1;
+      if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx + 1, items.length - 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(idx - 1, -1); }
+      else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); cbSelect(type, ctx, items[idx]); return; }
+      else if (e.key === 'Escape') { cbCloseDrop(id); return; }
+      cbFocusIdx[id] = idx;
+      items.forEach((el, i) => el.classList.toggle('auto__kb-focus', i === idx));
+      if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+    }
+
+    function cbCreateNew(type, ctx, query) {
+      const id = cbId(type, ctx);
+      cbCloseDrop(id);
+      const inputEl = document.querySelector(`#${id} .auto__combo-input-row input`);
+      if (inputEl) inputEl.style.display = 'none';
+      const card = document.getElementById(id + '_sel');
+      if (card) {
+        card.innerHTML = `<div class="auto__combo-sel-header">
+      <span class="auto__combo-sel-name">New: <em>${esc(query)}</em></span>
+      <span class="auto__ci-badge auto__badge-new" style="font-size:10px;padding:2px 7px;border-radius:10px">New record</span>
+      <button class="auto__combo-deselect" onclick="cbClear('${type}','${ctx}')" title="Clear" aria-label="Clear">×</button>
+    </div><div class="auto__combo-sel-detail">Fill in the fields below to complete this new record.</div>`;
+        card.classList.add('auto__visible');
+      }
+      // Pre-fill name fields for patient
+      if (type === 'patient') {
+        const parts = query.trim().split(' ');
+        const fn = document.getElementById(ctx + '_first_name'), ln = document.getElementById(ctx + '_last_name');
+        if (fn && parts[0]) fn.value = parts[0];
+        if (ln && parts.length > 1) ln.value = parts.slice(1).join(' ');
+      }
+      toast(`New ${type} record — fill in the fields below`);
+    }
+
+    function cbAutoFill(type, ctx, item) {
+      if (type === 'patient') {
+        const map = {
+          [`${ctx}_title`]: 'title', [`${ctx}_first_name`]: 'first_name', [`${ctx}_middle_name`]: 'middle_name',
+          [`${ctx}_last_name`]: 'last_name', [`${ctx}_preferred_name`]: 'preferred_name', [`${ctx}_dob`]: 'dob',
+          [`${ctx}_gender`]: 'gender', [`${ctx}_nationality`]: 'nationality', [`${ctx}_id_number`]: 'id_number',
+          [`${ctx}_id_type`]: 'id_type', [`${ctx}_race`]: 'race', [`${ctx}_language`]: 'language',
+          [`${ctx}_mobile`]: 'mobile', [`${ctx}_alt_phone`]: 'alt_phone', [`${ctx}_email`]: 'email',
+          [`${ctx}_street`]: 'street', [`${ctx}_suburb`]: 'suburb', [`${ctx}_city`]: 'city',
+          [`${ctx}_province`]: 'province', [`${ctx}_postal_code`]: 'postal_code'
+        };
+        for (const [elId, field] of Object.entries(map)) {
+          const el = document.getElementById(elId);
+          if (el && item[field] !== undefined) setVal(el, item[field]);
+        }
+        if (ctx === 'p' && item.marital_status) {
+          const r = document.querySelector(`input[name="p_marital"][value="${item.marital_status}"]`);
+          if (r) { r.checked = true; onMaritalChange(r); }
+        }
+        toast(`Record loaded: ${item.title} ${item.first_name} ${item.last_name}`);
+      } else if (type === 'scheme') {
+        // Populate plan dropdown
+        const planSel = document.getElementById(ctx + '_plan_sel');
+        if (planSel && item.plans) {
+          planSel.innerHTML = item.plans.map(p => `<option>${esc(p)}</option>`).join('');
+        }
+        toast(`${item.name} selected — choose your plan option below`);
+      } else if (type === 'medication') {
+        // Auto-suggest dosage in the nearest dosage field — find sibling input
+        toast(`${item.name} selected · Typical: ${item.freq}`);
+      } else if (type === 'employer') {
+        toast(`${item.name} selected`);
+      } else if (type === 'doctor') {
+        toast(`${item.name} selected`);
+      }
+    }
+
+    function resetPlanSelect(ctx) {
+      const s = document.getElementById(ctx + '_plan_sel');
+      if (s) s.innerHTML = '<option value="">Select scheme first</option>';
+    }
+
+    function setVal(el, val) {
+      if (!val && val !== 0) return;
+      if (el.tagName === 'SELECT') {
+        for (const o of el.options) { if (o.value === val || o.text === val) { o.selected = true; break; } }
+      } else { el.value = val; }
+    }
+
+    function age(dob) {
+      if (!dob) return '?';
+      return Math.floor((Date.now() - new Date(dob)) / (365.25 * 24 * 3600 * 1000));
+    }
+
+    function esc(s) {
+      if (typeof s !== 'string') s = String(s || '');
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Close on outside click
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.auto__combo-wrap'))
+        document.querySelectorAll('.auto__combo-drop.auto__visible').forEach(d => d.classList.remove('auto__visible'));
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+       MEDICATION ROWS — dynamic add
+    ═══════════════════════════════════════════════════════════ */
+    const medCount = { p: 0, s: 0 };
+
+    function initMedRow(prefix) {
+      if (medCount[prefix] > 0) return; // already has rows
+      addMedRow(prefix);
+    }
+
+    function addMedRow(prefix) {
+      medCount[prefix]++;
+      const n = medCount[prefix];
+      const list = document.getElementById(prefix + '_med_list');
+      const cbKey = `cb_med_${prefix}${n}`;
+      const row = document.createElement('div');
+      row.className = 'auto__med-row';
+      row.innerHTML = `
+   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:11px;font-weight:600;color:#8a94a6;text-transform:uppercase;letter-spacing:.06em">Medication ${n}</div>
+    ${n > 1 ? `<button type="button" onclick="this.closest('.auto__med-row').remove()" style="background:transparent;border:none;cursor:pointer;color:#c0392b;font-size:13px;font-family:inherit">Remove</button>` : ''}
+   </div>
+   <div class="auto__field-row">
+    <div class="auto__field auto__span-2">
+     <label class="auto__label">Search Medication Name</label>
+     <div id="${cbKey}" class="auto__combo-wrap">
+      <div class="auto__combo-input-row">
+       <input type="text" placeholder="Start typing a medication name…" autocomplete="off"
+        oninput="cbSearch(this,'medication','${prefix}${n}')"
+        onkeydown="cbKeyNav(event,'medication','${prefix}${n}')"
+        onfocus="cbFocus(this,'medication','${prefix}${n}')"/>
+       <svg class="auto__combo-spin" id="${cbKey}_spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a94a6" stroke-width="2" aria-hidden="true"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+       <button class="auto__combo-clear-btn" id="${cbKey}_clr" onclick="cbClear('medication','${prefix}${n}')" aria-label="Clear">×</button>
+      </div>
+      <div class="auto__combo-drop" id="${cbKey}_drop"></div>
+      <div class="auto__combo-selected" id="${cbKey}_sel"></div>
+     </div>
+    </div>
+    <div class="auto__field"><label class="auto__label">Dosage</label><input class="auto__input" type="text" id="${prefix}_med_dose_${n}" placeholder="e.g. 500mg"/></div>
+    <div class="auto__field"><label class="auto__label">Frequency</label><select class="auto__select"><option>Once daily</option><option>Twice daily</option><option>Three times daily</option><option>As needed</option><option>Weekly</option><option>Other</option></select></div>
+    <div class="auto__field"><label class="auto__label">Prescribing Doctor</label><input class="auto__input" type="text" placeholder="Dr Smith"/></div>
+    <div class="auto__field"><label class="auto__label">Condition Being Treated</label><input class="auto__input" type="text" placeholder="e.g. Type 2 Diabetes"/></div>
+   </div>`;
+      list.appendChild(row);
+    }
+
+    // Trigger first med row when block is shown
+    function toggleBlock(blockId, el, showWhenYes) {
+      const block = document.getElementById(blockId);
+      if (!block) return;
+      const show = el.type === 'checkbox' ? !el.checked : (showWhenYes ? el.value === 'yes' : el.value !== 'yes');
+      block.style.display = show ? 'block' : 'none';
+      // Init first med row on first show
+      if (show && blockId.includes('med') && blockId.includes('block')) {
+        const prefix = blockId.startsWith('p') ? 'p' : 's';
+        if (medCount[prefix] === 0) addMedRow(prefix);
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       STEPPER
+    ═══════════════════════════════════════════════════════════ */
+    const TOTAL = 7, stepLabels = ['Personal Information', 'Contact Details', 'Medical History', 'Current Medications', 'Lifestyle & Social', 'Insurance & Financial', 'Emergency Contacts'];
+    let step = 0, married = false, tab = 'patient', done = new Set();
+
+    function onMaritalChange(input) {
+      married = input.value === 'married';
+      document.getElementById('auto__tab-bar').classList.toggle('auto__visible', married);
+      if (!married) { tab = 'patient'; showPanel(); }
+    }
+
+    function switchTab(t) {
+      tab = t;
+      document.querySelectorAll('.auto__tab-btn').forEach(b => b.classList.toggle('auto__tab-active', b.dataset.tab === t));
+      showPanel();
+    }
+
+    function showPanel() {
+      document.querySelectorAll('.auto__panel').forEach(p => p.classList.remove('auto__panel-active'));
+      const t = married ? tab : 'patient';
+      const p = document.querySelector(`.auto__panel[data-step="${step}"][data-tab="${t}"]`);
+      if (p) p.classList.add('auto__panel-active');
+    }
+
+    function syncUI() {
+      const pct = Math.round(((step + 1) / TOTAL) * 100);
+      document.getElementById('auto__pfill').style.width = pct + '%';
+      document.getElementById('auto__ppct').textContent = pct + '%';
+      document.getElementById('auto__plabel').textContent = stepLabels[step];
+      document.getElementById('auto__header-sub').textContent = `Step ${step + 1} of ${TOTAL} — ${stepLabels[step]}`;
+      document.getElementById('auto__step-info').textContent = `Section ${step + 1} of ${TOTAL}`;
+      document.getElementById('auto__prev-btn').disabled = step === 0;
+      const last = step === TOTAL - 1;
+      document.getElementById('auto__next-btn').style.display = last ? 'none' : 'flex';
+      document.getElementById('auto__submit-btn').style.display = last ? 'flex' : 'none';
+      document.querySelectorAll('.auto__step-btn').forEach((btn, i) => {
+        btn.classList.remove('auto__step-active', 'auto__step-complete');
+        const num = btn.querySelector('.auto__step-num'), status = btn.querySelector('.auto__step-status');
+        if (i === step) {
+          btn.classList.add('auto__step-active'); num.textContent = i + 1; status.textContent = '';
+        } else if (done.has(i)) {
+          btn.classList.add('auto__step-complete');
+          num.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+          status.innerHTML = '';
+        } else {
+          num.textContent = i + 1; status.textContent = '';
+        }
+      });
+    }
+
+    function goToStep(s) { step = s; showPanel(); syncUI(); document.getElementById('auto__panels').scrollTop = 0; }
+    function nextStep() { if (step < TOTAL - 1) { done.add(step); step++; goToStep(step); } }
+    function prevStep() { if (step > 0) { step--; goToStep(step); } }
+
+    function toast(msg, ms = 2800) {
+      const t = document.getElementById('auto__toast');
+      t.textContent = msg; t.classList.add('auto__toast-show');
+      setTimeout(() => t.classList.remove('auto__toast-show'), ms);
+    }
+
+    function saveDraft() { toast('Draft saved successfully'); }
+
+    function submitForm() {
+      done.add(step); syncUI();
+      document.getElementById('auto__body').style.display = 'none';
+      document.getElementById('auto__footer').style.display = 'none';
+      document.getElementById('auto__success').classList.add('auto__visible');
+      document.getElementById('auto__ref').textContent = 'Ref: PAT-' + Date.now().toString().slice(-6) + '-' + Math.floor(Math.random() * 900 + 100);
+    }
+
+    function openModal() { document.getElementById('auto__overlay').classList.add('auto__visible'); }
+    function closeModal() { document.getElementById('auto__overlay').classList.remove('auto__visible'); }
+
+    document.getElementById('auto__overlay').addEventListener('click', e => { if (e.target.id === 'auto__overlay') closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Init
+    const today = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('#p_sign_date,#s_sign_date').forEach(el => el.value = today);
+    showPanel(); syncUI();
+  </script>
+</body>
+
+</html>

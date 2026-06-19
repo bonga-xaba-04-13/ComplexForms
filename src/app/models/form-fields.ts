@@ -28,6 +28,8 @@ export interface JsonFormControl {
   options?: ControlOption[];
   /** For 'select' controls: fetch options dynamically instead of using a static `options` list. */
   optionsSource?: OptionsSource;
+  /** When true the field spans both grid columns (auto-applied to textarea and check types). */
+  span2?: boolean;
 }
 
 export interface JsonFormdata {

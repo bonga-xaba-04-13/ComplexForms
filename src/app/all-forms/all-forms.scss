@@ -78,5 +78,15 @@ $white:     #ffffff;
     &:hover {
       background-color: $primary-light;
     }
+
+    &--v2 {
+      background-color: #1a7a5e;
+      &:hover { background-color: #15664f; }
+    }
   }
+}
+
+.form-card--v2 {
+  border-color: #c5d8ed;
+  background: linear-gradient(135deg, #f0f5fb 0%, #f8fbff 100%);
 }

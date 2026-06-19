@@ -3,6 +3,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Patientcapture } from '../components/patientcapture/patientcapture';
 import { Jointcapture } from '../components/jointcapture/jointcapture';
 import { Assetbuycapture } from '../components/assetbuycapture/assetbuycapture';
+import { PatientCaptureV2 } from '../components/patient-capture-v2/patient-capture-v2';
 
 @Component({
   selector: 'app-all-forms',
@@ -66,6 +67,18 @@ export class AllForms {
         formUrl: 'asset_buy_capture.json',
         title: 'Asset Buy Capture',
       },
+    });
+  }
+
+  openPatientCaptureV2(): void {
+    this.dialog.open(PatientCaptureV2, {
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'full-screen-dialog',
+      width: '95vw',
+      maxWidth: '1100px',
+      height: '92vh',
+      data: { title: 'Patient Intake V2' },
     });
   }
 }

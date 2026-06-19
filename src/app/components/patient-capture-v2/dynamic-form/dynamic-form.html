@@ -1,0 +1,117 @@
+@if (formGroup) {
+  <div [formGroup]="formGroup">
+
+    <div class="auto__panel-title">
+      {{ isPartner ? 'Spouse / Partner — ' : '' }}{{ stepLabel }}
+    </div>
+
+    @if (stepDescription) {
+      <div class="auto__panel-desc">{{ stepDescription }}</div>
+    }
+
+    @if (isPartner) {
+      <div class="auto__info-banner">
+        <span>&#8505;</span>
+        All sections apply equally to the spouse or partner. Enter their individual details here.
+      </div>
+    }
+
+    <div class="auto__field-row">
+      @for (control of controls; track control.name) {
+        <div class="auto__field" [class.auto__span-2]="isSpan2(control)">
+
+          @if (control.type !== 'check') {
+            <label class="auto__label" [for]="control.name">
+              {{ control.label }}
+              @if (control.validators['required']) {
+                <span class="auto__required">*</span>
+              }
+            </label>
+          }
+
+          @switch (control.type) {
+
+            @case ('select') {
+              <select
+                class="auto__select"
+                [id]="control.name"
+                [formControlName]="control.name"
+                [class.auto__invalid]="isInvalid(control.name)">
+                <option value="">Select {{ control.label }}</option>
+                @for (opt of (control.options ?? []); track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            }
+
+            @case ('textarea') {
+              <textarea
+                class="auto__textarea"
+                [id]="control.name"
+                [formControlName]="control.name"
+                [placeholder]="control.description"
+                [class.auto__invalid]="isInvalid(control.name)"
+                [attr.disabled]="!isEditing ? true : null">
+              </textarea>
+            }
+
+            @case ('check') {
+              <label class="auto__label">
+                {{ control.label }}
+                @if (control.validators['required']) {
+                  <span class="auto__required">*</span>
+                }
+              </label>
+              <div class="auto__check-group">
+                @for (opt of (control.options ?? []); track opt.value) {
+                  <label class="auto__check-item">
+                    <input
+                      type="checkbox"
+                      [value]="opt.value"
+                      [attr.disabled]="!isEditing ? true : null" />
+                    {{ opt.label }}
+                  </label>
+                }
+              </div>
+            }
+
+            @case ('radio') {
+              <div class="auto__status-toggle">
+                @for (opt of (control.options ?? []); track opt.value) {
+                  <input
+                    type="radio"
+                    [id]="control.name + '_' + opt.value"
+                    [formControlName]="control.name"
+                    [value]="opt.value"
+                    (change)="onRadioChange(control, opt.value)" />
+                  <label [for]="control.name + '_' + opt.value">{{ opt.label }}</label>
+                }
+              </div>
+              @if (control.description) {
+                <span class="auto__hint">{{ control.description }}</span>
+              }
+            }
+
+            @default {
+              <input
+                class="auto__input"
+                [type]="control.type"
+                [id]="control.name"
+                [formControlName]="control.name"
+                [placeholder]="control.description"
+                [class.auto__invalid]="isInvalid(control.name)"
+                [attr.disabled]="!isEditing ? true : null" />
+            }
+
+          }
+
+          @if (isInvalid(control.name)) {
+            <span class="auto__error-msg">{{ control.label }} is required</span>
+          }
+
+        </div>
+      }
+    </div>
+
+  </div>
+}

@@ -53,3 +53,21 @@ body {
     overflow: hidden;
   }
 }
+
+// Full-height shell for Patient Capture V2 — no internal padding, component owns its chrome.
+.full-screen-dialog {
+  .mat-mdc-dialog-container {
+    height: 92vh;
+    max-height: 92vh;
+    padding: 0;
+  }
+
+  .mdc-dialog__surface {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 4px;
+    padding: 0;
+  }
+}
