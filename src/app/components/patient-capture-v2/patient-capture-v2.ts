@@ -41,6 +41,67 @@ function opt(values: string[], labels?: string[]): ControlOption[] {
   return values.map((v, i) => ({ value: v, label: (labels ?? values)[i] || 'Select' }));
 }
 
+// ── Combobox option lists ─────────────────────────────────────────────────────
+
+const NATIONALITY_OPTS: ControlOption[] = [
+  'South African', 'Zimbabwean', 'Mozambican', 'Malawian', 'Namibian', 'Botswanan',
+  'Zambian', 'Angolan', 'Congolese (DRC)', 'Kenyan', 'Nigerian', 'Ghanaian',
+  'Ethiopian', 'Lesothan', 'Swazi', 'Rwandan', 'Ugandan', 'Tanzanian',
+  'Indian', 'Pakistani', 'Chinese', 'British', 'American', 'German', 'French',
+  'Portuguese', 'Dutch', 'Other',
+].map(v => ({ value: v, label: v }));
+
+const LANGUAGE_OPTS: ControlOption[] = [
+  'isiZulu', 'isiXhosa', 'Afrikaans', 'English', 'Sepedi / Sesotho sa Leboa',
+  'Setswana', 'Sesotho', 'Xitsonga', 'siSwati', 'Tshivenda', 'isiNdebele',
+  'French', 'Portuguese', 'Hindi', 'Mandarin / Chinese', 'Arabic', 'Other',
+].map(v => ({ value: v, label: v }));
+
+const CITY_OPTS: ControlOption[] = [
+  'Johannesburg', 'Cape Town', 'Durban', 'Pretoria / Tshwane', 'Port Elizabeth (Gqeberha)',
+  'Bloemfontein', 'East London', 'Nelspruit (Mbombela)', 'Polokwane', 'Kimberley',
+  'Pietermaritzburg', 'Rustenburg', 'George', 'Witbank (eMalahleni)', 'Ekurhuleni',
+  'Soweto', 'Sandton', 'Benoni', 'Boksburg', 'Germiston', 'Springs', 'Midrand',
+  'Centurion', 'Roodepoort', 'Vereeniging', 'Vanderbijlpark', 'Klerksdorp',
+  'Mahikeng', 'Tzaneen', 'Richards Bay', 'Umtata (Mthatha)', 'Other',
+].map(v => ({ value: v, label: v }));
+
+const MEDICATION_OPTS: ControlOption[] = [
+  'Panado', 'Disprin', 'Voltaren', 'Mybulen', 'Grandpa Headache Powder', 'Corenza-C',
+  'Allergex', 'Cetirizine (Zyrtec)', 'Loratadine (Clarityne)', 'Amoxicillin', 'Augmentin',
+  'Metformin', 'Glucophage', 'Amlodipine', 'Lisinopril', 'Atorvastatin', 'Rosuvastatin',
+  'Omeprazole', 'Lansoprazole', 'Salbutamol', 'Fluticasone', 'Beclometasone',
+  'Warfarin', 'Aspirin', 'Paracetamol', 'Ibuprofen', 'Diclofenac', 'Codeine',
+  'Metoprolol', 'Atenolol', 'Carvedilol', 'Hydrochlorothiazide', 'Furosemide',
+  'Sertraline', 'Fluoxetine', 'Escitalopram', 'Citalopram', 'Alprazolam',
+  'Methotrexate', 'Prednisolone', 'Dexamethasone', 'Insulin (various)', 'Other',
+].map(v => ({ value: v, label: v }));
+
+const OCCUPATION_OPTS: ControlOption[] = [
+  'Accountant', 'Administrator', 'Analyst', 'Architect', 'Attorney / Lawyer',
+  'Builder / Construction', 'Business Owner', 'Cashier', 'Cleaner / Domestic Worker',
+  'Clerk', 'Designer (Graphic / Interior)', 'Doctor / Physician', 'Driver',
+  'Electrician', 'Engineer', 'Farmer', 'Firefighter', 'Government Employee',
+  'Hairdresser / Beautician', 'IT Specialist', 'Journalist', 'Manager',
+  'Mechanic', 'Nurse / Healthcare Worker', 'Pharmacist', 'Plumber', 'Police Officer',
+  'Receptionist', 'Retail Worker', 'Sales Representative', 'Social Worker',
+  'Student', 'Teacher / Educator', 'Technician', 'Unemployed', 'Other',
+].map(v => ({ value: v, label: v }));
+
+const SCHEME_OPTS: ControlOption[] = [
+  'Discovery Health', 'Medihelp', 'Bonitas', 'Momentum Health', 'Fedhealth',
+  'Bestmed', 'Hosmed', 'LA Health', 'Polmed', 'Profmed', 'Sizwe',
+  'Remedi', 'KeyHealth', 'CompCare',
+  'Government Employees Medical Scheme (GEMS)', 'Other',
+].map(v => ({ value: v, label: v }));
+
+const RELATIONSHIP_OPTS: ControlOption[] = [
+  'Spouse', 'Partner / Life Partner', 'Parent', 'Mother', 'Father',
+  'Sibling', 'Brother', 'Sister', 'Child', 'Son', 'Daughter',
+  'Friend', 'Colleague', 'Grandparent', 'Grandmother', 'Grandfather',
+  'Aunt', 'Uncle', 'Cousin', 'Step-parent', 'Step-sibling', 'Guardian', 'Other',
+].map(v => ({ value: v, label: v }));
+
 const CONDITIONS_OPTS: ControlOption[] = [
   'Diabetes', 'Hypertension', 'Asthma', 'Heart Disease', 'Cancer',
   'HIV/AIDS', 'Arthritis', 'Depression / Anxiety', 'Epilepsy', 'TB', 'Thyroid Disorder', 'Other',
@@ -90,11 +151,11 @@ function personalBase(prefix: string): JsonFormControl[] {
     ctrl(`${prefix}preferredName`, 'Preferred Name',        'If different from first name',     'text'),
     required(ctrl(`${prefix}dob`,          'Date of Birth',         '',                                'date')),
     required(ctrl(`${prefix}gender`,       'Gender',                'Select',                          'select', { options: OPT.gender })),
-    ctrl(`${prefix}nationality`,   'Nationality',           'Select',                          'select', { options: OPT.nationality }),
-    ctrl(`${prefix}idType`,        'ID Type',               'Select',                          'select', { options: OPT.idType }),
+    ctrl(`${prefix}nationality`,   'Nationality',           'Type to search nationality…',     'combobox', { options: NATIONALITY_OPTS }),
+    ctrl(`${prefix}idType`,        'ID Type',               'Select',                          'select',  { options: OPT.idType }),
     required(ctrl(`${prefix}idNumber`,     'ID / Passport Number',  '13-digit SA ID or passport',      'text', { span2: true })),
     ctrl(`${prefix}race`,          'Race / Population Group','Optional — used for equitable health reporting', 'select', { options: OPT.race }),
-    ctrl(`${prefix}language`,      'Home Language',         'Select',                          'select', { options: OPT.language }),
+    ctrl(`${prefix}language`,      'Home Language',         'Type to search language…',        'combobox', { options: LANGUAGE_OPTS }),
   ];
 }
 
@@ -106,7 +167,7 @@ function contactBase(prefix: string): JsonFormControl[] {
     ctrl(`${prefix}preferredContact`, 'Preferred Contact Method','Select',                   'select', { options: OPT.contact }),
     required(ctrl(`${prefix}street`,           'Street Address / Unit',  'e.g. 12 Oak Ave, Unit 3B',    'text',   { span2: true })),
     ctrl(`${prefix}suburb`,          'Suburb / Township',      '',                            'text'),
-    required(ctrl(`${prefix}city`,             'City / Town',            '',                            'text')),
+    required(ctrl(`${prefix}city`,             'City / Town',            'Type to search city…',        'combobox', { options: CITY_OPTS })),
     ctrl(`${prefix}province`,        'Province',               'Select',                      'select', { options: OPT.province }),
     ctrl(`${prefix}postalCode`,      'Postal Code',            '4-digit code',                'text'),
     ctrl(`${prefix}country`,         'Country',                'Select',                      'select', { options: OPT.country }),
@@ -127,7 +188,7 @@ function medHistoryControls(prefix: string): JsonFormControl[] {
 function medicationControls(prefix: string): JsonFormControl[] {
   return [
     ctrl(`${prefix}onMeds`,             'Currently on Medication?',    'Select',             'radio', { options: OPT.yesNo }),
-    ctrl(`${prefix}medicationName`,     'Medication Name',             '',                   'text'),
+    ctrl(`${prefix}medicationName`,     'Medication Name',             'Type to search medication…',  'combobox', { options: MEDICATION_OPTS }),
     ctrl(`${prefix}dosage`,             'Dosage',                      'e.g. 10 mg',         'text'),
     ctrl(`${prefix}frequency`,          'Frequency',                   'Select',             'select', { options: OPT.frequency }),
     ctrl(`${prefix}prescribingDoctor`,  'Prescribing Doctor',          '',                   'text'),
@@ -144,7 +205,7 @@ function lifestyleControls(prefix: string): JsonFormControl[] {
     ctrl(`${prefix}alcohol`,     'Alcohol Use',        'Select',  'select', { options: OPT.alcohol }),
     ctrl(`${prefix}exercise`,    'Exercise Frequency', 'Select',  'select', { options: OPT.exercise }),
     ctrl(`${prefix}diet`,        'Dietary Preference', 'Select',  'select', { options: OPT.diet }),
-    ctrl(`${prefix}occupation`,  'Occupation',         '',         'text'),
+    ctrl(`${prefix}occupation`,  'Occupation',         'Type to search occupation…',  'combobox', { options: OCCUPATION_OPTS }),
     ctrl(`${prefix}employer`,    'Employer',           '',         'text'),
     ctrl(`${prefix}housing`,     'Housing Situation',  'Select',  'select', { options: OPT.housing }),
     ctrl(`${prefix}dependants`,  'Number of Dependants','',        'number'),
@@ -155,7 +216,7 @@ function lifestyleControls(prefix: string): JsonFormControl[] {
 function insuranceControls(prefix: string): JsonFormControl[] {
   return [
     ctrl(`${prefix}hasMedicalAid`,      'Has Medical Aid?',           'Select',             'radio',  { options: OPT.yesNo }),
-    ctrl(`${prefix}scheme`,             'Medical Aid Scheme',         'e.g. Discovery',     'text'),
+    ctrl(`${prefix}scheme`,             'Medical Aid Scheme',         'Type to search scheme…',     'combobox', { options: SCHEME_OPTS }),
     ctrl(`${prefix}plan`,               'Plan / Option',              '',                   'text'),
     ctrl(`${prefix}membershipNumber`,   'Membership Number',          '',                   'text'),
     ctrl(`${prefix}dependantCode`,      'Dependant Code',             '00 for main member', 'text'),
@@ -169,12 +230,12 @@ function insuranceControls(prefix: string): JsonFormControl[] {
 function emergencyControls(prefix: string): JsonFormControl[] {
   return [
     required(ctrl(`${prefix}ec1FullName`,      'Contact 1 — Full Name',    '',               'text')),
-    required(ctrl(`${prefix}ec1Relationship`,  'Relationship',              'Select',         'select', { options: OPT.relationship })),
+    required(ctrl(`${prefix}ec1Relationship`,  'Relationship',              'Type to search…','combobox', { options: RELATIONSHIP_OPTS })),
     required(ctrl(`${prefix}ec1Mobile`,        'Mobile Number',             '+27 82 000 0000','tel')),
     ctrl(`${prefix}ec1Phone`,        'Home Phone',                '',               'tel'),
     ctrl(`${prefix}ec1Email`,        'Email',                     '',               'email'),
     ctrl(`${prefix}ec2FullName`,     'Contact 2 — Full Name',    '',               'text'),
-    ctrl(`${prefix}ec2Relationship`, 'Relationship',              'Select',         'select', { options: OPT.relationship }),
+    ctrl(`${prefix}ec2Relationship`, 'Relationship',              'Type to search…','combobox', { options: RELATIONSHIP_OPTS }),
     ctrl(`${prefix}ec2Mobile`,       'Mobile Number',             '',               'tel'),
     ctrl(`${prefix}ec2Email`,        'Email',                     '',               'email'),
   ];

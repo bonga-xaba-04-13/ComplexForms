@@ -188,6 +188,46 @@
   }
 }
 
+// ── Combobox / Typeahead ──────────────────────────────────────────────────────
+.auto__combobox {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.auto__suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.09);
+  z-index: 200;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+
+  &::-webkit-scrollbar       { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #d0d5dd; border-radius: 2px; }
+}
+
+.auto__suggestion-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #1a1a1a;
+  transition: background 0.1s;
+
+  &:hover {
+    background: #f0f4f8;
+    color: #1a3a5c;
+  }
+}
+
 // ── Hint & error ─────────────────────────────────────────────────────────────
 .auto__hint {
   font-size: 11px;

@@ -92,6 +92,32 @@
               }
             }
 
+            @case ('combobox') {
+              <div class="auto__combobox">
+                <input
+                  class="auto__input"
+                  type="text"
+                  [id]="control.name"
+                  [formControlName]="control.name"
+                  [placeholder]="control.description || 'Type to search…'"
+                  [class.auto__invalid]="isInvalid(control.name)"
+                  autocomplete="off"
+                  (input)="onComboboxInput(control, $any($event.target).value)"
+                  (blur)="closeSuggestions(control.name)" />
+                @if (activeCombobox === control.name && suggestionMap[control.name]?.length) {
+                  <ul class="auto__suggestions" role="listbox">
+                    @for (opt of suggestionMap[control.name]; track opt.value) {
+                      <li class="auto__suggestion-item"
+                          role="option"
+                          (mousedown)="selectSuggestion(control, opt)">
+                        {{ opt.label }}
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
+
             @default {
               <input
                 class="auto__input"

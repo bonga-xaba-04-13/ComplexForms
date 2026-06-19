@@ -1,6 +1,6 @@
 import { FormGroup } from '@angular/forms';
 
-export type ControlType = 'text' | 'email' | 'tel' | 'date' | 'number' | 'select' | 'textarea' | 'check' | 'radio';
+export type ControlType = 'text' | 'email' | 'tel' | 'date' | 'number' | 'select' | 'textarea' | 'check' | 'radio' | 'combobox';
 
 export interface ControlOption {
   label: string;
@@ -30,6 +30,8 @@ export interface JsonFormControl {
   optionsSource?: OptionsSource;
   /** When true the field spans both grid columns (auto-applied to textarea and check types). */
   span2?: boolean;
+  /** Minimum characters to type before combobox suggestions appear (default: 3). */
+  minChars?: number;
 }
 
 export interface JsonFormdata {
