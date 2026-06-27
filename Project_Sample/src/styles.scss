@@ -1,1 +1,55 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+}
+
+.custom-dialog-container {
+  .mat-mdc-dialog-container {
+    height: 85vh;
+    max-height: 85vh;
+  }
+
+  .mdc-dialog__surface {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+.full-screen-dialog {
+  .mat-mdc-dialog-container {
+    height: 92vh;
+    max-height: 92vh;
+    padding: 0;
+  }
+
+  .mdc-dialog__surface {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 4px;
+    padding: 0;
+  }
+}

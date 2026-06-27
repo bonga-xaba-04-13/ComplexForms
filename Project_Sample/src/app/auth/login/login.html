@@ -1,0 +1,38 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Patient Data Forms</h1>
+      <p>Demo Login</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="login()" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          placeholder="Enter any username"
+          class="form-control">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="Enter any password"
+          class="form-control">
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Continue as Demo User
+      </button>
+    </form>
+
+    <div class="login-hint">
+      <p>This is a demo login. Any credentials are accepted.</p>
+    </div>
+  </div>
+</div>
