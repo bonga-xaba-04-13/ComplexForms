@@ -7,6 +7,9 @@
 /.angular/
 .angular/
 
+../Project_Sample0/node_modules/
+../Project_Sample/node_modules/
+
 # Node modules and dependency files
 /node_modules/
 /package-lock.json
