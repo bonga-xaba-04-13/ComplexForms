@@ -1,0 +1,26 @@
+[
+  {
+    "value": "property_001",
+    "label": "12 Oak Avenue, Sandton - R 2,450,000",
+    "propertyType": "single_residential",
+    "propertyAddress": "12 Oak Avenue, Sandton, 2196",
+    "purchasePrice": 2450000,
+    "depositAmount": 245000
+  },
+  {
+    "value": "property_002",
+    "label": "Unit 4, Riverside Complex, Cape Town - R 1,180,000",
+    "propertyType": "sectional_title",
+    "propertyAddress": "Unit 4, Riverside Complex, Cape Town, 8001",
+    "purchasePrice": 1180000,
+    "depositAmount": 118000
+  },
+  {
+    "value": "property_003",
+    "label": "Erf 245, Hartbeespoort - R 650,000",
+    "propertyType": "vacant_land",
+    "propertyAddress": "Erf 245, Hartbeespoort, 0216",
+    "purchasePrice": 650000,
+    "depositAmount": 65000
+  }
+]

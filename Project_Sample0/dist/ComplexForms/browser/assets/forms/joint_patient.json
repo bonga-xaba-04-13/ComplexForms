@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "id": "patientStep",
+      "formTitle": "Patient Details",
+      "formDescription": "",
+      "formUrl": "patient.json"
+    },
+    {
+      "id": "workStep",
+      "formTitle": "Work Details",
+      "formDescription": "",
+      "formUrl": "work.json"
+    },
+    {
+      "id": "documentsStep",
+      "formTitle": "Documents",
+      "formDescription": "",
+      "formUrl": "documents.json"
+    }
+  ]
+}

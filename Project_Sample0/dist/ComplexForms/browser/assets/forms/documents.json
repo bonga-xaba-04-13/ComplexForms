@@ -1,0 +1,70 @@
+{
+    "controls": [
+        {
+            "name": "securityNumber",
+            "label": "Security Number",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "taxId",
+            "label": "Tax Id",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "driversLicenceNumber",
+            "label": "Drivers Licence Number",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "licenceExpiryDate",
+            "label": "Licence Expiry Date",
+            "description": "",
+            "type": "date",
+            "validators": {}
+        },
+        {
+            "name": "backgroudCheckAuthorization",
+            "label": "Background Check Authorization",
+            "description": "",
+            "type": "check",
+            "validators": {}
+        },
+        {
+            "name": "emergencyContactName",
+            "label": "Emergency Contact Name",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "emergencyContactPhone",
+            "label": "Emergency Contact Phone",
+            "description": "",
+            "type": "text",
+            "validators": {}
+        },
+        {
+            "name": "relationship",
+            "label": "Relationship",
+            "description": "",
+            "type": "select",
+            "validators": {},
+            "optionsSource": {
+                "endpoint": "relationships"
+            }
+        },
+        {
+            "name": "agreementAndConsent",
+            "label": "Agreement and Consent",
+            "description": "",
+            "type": "check",
+            "validators": {}
+        }
+    ]
+}

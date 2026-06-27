@@ -1,0 +1,23 @@
+[
+  {
+    "value": "client_001",
+    "label": "8501015009087 - Thabo Mokoena",
+    "idNumber": "8501015009087",
+    "profile": "Thabo Mokoena",
+    "clientType": "individual"
+  },
+  {
+    "value": "client_002",
+    "label": "9203126112089 - Lerato Dlamini",
+    "idNumber": "9203126112089",
+    "profile": "Lerato Dlamini",
+    "clientType": "joint_account_holder"
+  },
+  {
+    "value": "client_003",
+    "label": "7811230456088 - Sipho Ndlovu",
+    "idNumber": "7811230456088",
+    "profile": "Sipho Ndlovu Trading CC",
+    "clientType": "sole_proprietor"
+  }
+]

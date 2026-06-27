@@ -1,0 +1,54 @@
+{
+  "allowDynamicParticipants": false,
+  "controls": [
+    {
+      "name": "selectProperty",
+      "label": "Select Property",
+      "description": "Search and select a property to populate this form",
+      "type": "select",
+      "validators": {},
+      "optionsSource": {
+        "endpoint": "properties",
+        "valueKey": "value",
+        "labelKey": "label",
+        "populates": {
+          "propertyType": "propertyType",
+          "propertyAddress": "propertyAddress",
+          "purchasePrice": "purchasePrice",
+          "depositAmount": "depositAmount"
+        }
+      }
+    },
+    {
+      "name": "propertyType",
+      "label": "Property Type",
+      "description": "Select property type",
+      "type": "select",
+      "validators": { "required": true },
+      "optionsSource": {
+        "endpoint": "property-types"
+      }
+    },
+    {
+      "name": "propertyAddress",
+      "label": "Property Address",
+      "description": "Enter property address",
+      "type": "text",
+      "validators": { "required": true }
+    },
+    {
+      "name": "purchasePrice",
+      "label": "Purchase Price",
+      "description": "Enter purchase price",
+      "type": "number",
+      "validators": { "required": true }
+    },
+    {
+      "name": "depositAmount",
+      "label": "Deposit Amount",
+      "description": "Enter deposit amount",
+      "type": "number",
+      "validators": {}
+    }
+  ]
+}
