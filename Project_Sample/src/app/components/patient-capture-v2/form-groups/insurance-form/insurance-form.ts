@@ -54,7 +54,7 @@ export class InsuranceForm extends BaseFormGroup implements OnChanges, OnInit, O
 
     // Handle medical scheme search from DB
     if ((control as any).categoryId === 'medical_scheme') {
-      this.formService.searchComboboxOptions('p_scheme', value)
+      this.formService.searchOptions('scheme', value)
         .pipe(takeUntil(this.destroy$))
         .subscribe(options => {
           this.suggestionMap[control.name] = options.slice(0, 8);

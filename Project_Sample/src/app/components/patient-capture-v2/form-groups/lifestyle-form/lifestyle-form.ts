@@ -56,7 +56,7 @@ export class LifestyleForm extends BaseFormGroup implements OnChanges, OnInit, O
 
     // Handle occupation search from DB
     if ((control as any).categoryId === 'occupation') {
-      this.formService.searchComboboxOptions('p_occupation', value)
+      this.formService.searchOptions('occupation', value)
         .pipe(takeUntil(this.destroy$))
         .subscribe(options => {
           this.suggestionMap[control.name] = options.slice(0, 8);

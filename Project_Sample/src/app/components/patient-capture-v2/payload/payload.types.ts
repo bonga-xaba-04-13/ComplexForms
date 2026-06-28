@@ -202,3 +202,45 @@ export interface ParticipantPayload {
  * Use as return type when a method can produce either format.
  */
 export type PayloadOutput = StepGroupedPayload | ParticipantPayload;
+
+/**
+ * Metadata about a draft save (step progress, timestamps, etc.)
+ */
+export interface DraftMetadata {
+  currentStep: number;
+  completedSteps: number[];
+  totalSteps: number;
+}
+
+/**
+ * Complete draft data including both payloads and metadata.
+ * Stored in localStorage as JSON.
+ */
+export interface DraftData {
+  savedAt: string;
+  captureMode: 'single' | 'married';
+  formatA: StepGroupedPayload;
+  formatB: ParticipantPayload;
+  metadata: DraftMetadata;
+  schemaVersion: number;
+}
+
+/**
+ * Context returned when restoring a draft.
+ * Provides snapshots and metadata needed to populate forms.
+ */
+export interface RestoreContext {
+  snapshots: StepSnapshot[];
+  captureMode: 'single' | 'married';
+  currentStep: number;
+  completedSteps: number[];
+}
+
+/**
+ * Storage size information for monitoring quota usage.
+ */
+export interface DraftSizeInfo {
+  bytes: number;
+  percentOfQuota: number;
+  quotaLimit: number;
+}

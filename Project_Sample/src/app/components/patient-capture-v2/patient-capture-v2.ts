@@ -16,7 +16,8 @@ import { LifestyleForm } from './form-groups/lifestyle-form/lifestyle-form';
 import { InsuranceForm } from './form-groups/insurance-form/insurance-form';
 import { EmergencyContactsForm } from './form-groups/emergency-contacts-form/emergency-contacts-form';
 import { PayloadBuilder } from './payload/payload-builder.service';
-import { StepSnapshot, StepGroupedPayload, ParticipantPayload } from './payload/payload.types';
+import { StepSnapshot, StepGroupedPayload, ParticipantPayload, DraftMetadata } from './payload/payload.types';
+import { DraftService } from './services/draft.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -60,6 +61,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private formService: FormService,
     private payloadBuilder: PayloadBuilder,
+    private draftService: DraftService,
     private dialogRef: MatDialogRef<PatientCaptureV2>,
     @Inject(MAT_DIALOG_DATA) public data: { title?: string },
     private cdr: ChangeDetectorRef
@@ -67,6 +69,46 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadFormsFromApi();
+  }
+
+  /**
+   * Called after forms are loaded from API.
+   * Restores any saved draft if available.
+   */
+  private restoreDraftIfAvailable(): void {
+    const restored = this.draftService.restoreDraft();
+    if (restored) {
+      this.applyRestoredData(restored);
+    }
+  }
+
+  /**
+   * Apply restored draft data to forms and UI state.
+   */
+  private applyRestoredData(restored: any): void {
+    restored.snapshots.forEach((snapshot: StepSnapshot, index: number) => {
+      if (this.patientForms[index]) {
+        this.patientForms[index].patchValue(snapshot.patient);
+      }
+      if (snapshot.allowDynamicParticipants && this.partnerForms[index]) {
+        this.partnerForms[index].patchValue(snapshot.partner);
+      }
+    });
+
+    this.currentStep = Math.min(restored.currentStep, this.TOTAL - 1);
+    this.completedSteps = new Set(restored.completedSteps || []);
+    this.showToast('Draft restored', 2500);
+  }
+
+  /**
+   * Build draft metadata from current form state.
+   */
+  private buildDraftMetadata(): DraftMetadata {
+    return {
+      currentStep: this.currentStep,
+      completedSteps: Array.from(this.completedSteps),
+      totalSteps: this.TOTAL
+    };
   }
 
   ngOnDestroy(): void {
@@ -80,6 +122,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           this.initializeLoadedSteps(data.forms);
+          this.restoreDraftIfAvailable();
         },
         error: (err) => {
           console.error('Error loading forms from API:', err);
@@ -223,7 +266,18 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
   // ── Actions ─────────────────────────────────────────────────────────────────
 
   saveDraft(): void {
-    this.showToast('Draft saved successfully');
+    try {
+      const snapshots = this.toStepSnapshots();
+      const captureMode = this.showPartnerTab ? 'married' : 'single';
+      const metadata = this.buildDraftMetadata();
+
+      this.draftService.saveDraft(snapshots, captureMode, metadata);
+      this.showToast('Draft saved successfully', 2500);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.showToast(`Failed to save draft: ${errorMsg}`, 3500);
+      console.error('Draft save failed:', error);
+    }
   }
 
   /**
