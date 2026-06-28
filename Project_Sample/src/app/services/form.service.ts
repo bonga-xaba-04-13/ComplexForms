@@ -12,7 +12,7 @@ export class FormService {
   constructor(private http: HttpClient) {}
 
   getStepperForm(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/stepper_form`);
+    return this.http.get<any>(`${this.apiUrl}/patient_intake_stepper`);
   }
 
   getSubForm(keyname: string): Observable<any> {
