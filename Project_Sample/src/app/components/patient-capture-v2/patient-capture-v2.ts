@@ -1,5 +1,5 @@
 import {
-  Component, Inject, OnInit, HostListener, ViewChild, ElementRef, OnDestroy
+  Component, Inject, OnInit, HostListener, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
@@ -7,6 +7,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { JsonFormControl } from '../../models/form-fields';
 import { DynamicForm } from './dynamic-form/dynamic-form';
 import { FormService } from '../../services/form.service';
+import { FormGroupRegistry } from './form-groups/form-group-registry';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -40,7 +41,8 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private formService: FormService,
     private dialogRef: MatDialogRef<PatientCaptureV2>,
-    @Inject(MAT_DIALOG_DATA) public data: { title?: string }
+    @Inject(MAT_DIALOG_DATA) public data: { title?: string },
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -72,6 +74,9 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     this.partnerForms = [];
 
     forms.forEach((form: any) => {
+      // Log form type detection for Phase 1 identification
+      FormGroupRegistry.logFormTypeDetection(form, form.definition);
+
       const patientForm = this.buildGroup(form.definition);
       this.patientForms.push(patientForm);
 
@@ -89,6 +94,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     });
 
     this.TOTAL = this.LoadedSteps.length;
+    this.cdr.markForCheck();
   }
 
   private buildGroup(controls: any[]): FormGroup {
@@ -121,6 +127,12 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     return this.activeTab === 'partner'
       ? this.partnerForms[this.currentStep]
       : this.patientForms[this.currentStep];
+  }
+
+  getFormGroupType(formDef: any): string {
+    if (!formDef) return 'unknown';
+    const detection = FormGroupRegistry.identifyFormType(formDef.definition);
+    return detection.type;
   }
 
   get progressPercent(): number {

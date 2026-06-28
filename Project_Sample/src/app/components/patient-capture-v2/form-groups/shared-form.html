@@ -1,0 +1,217 @@
+<div class="form-container">
+  <div class="form-header">
+    <h2>{{ stepLabel }}</h2>
+    @if (stepDescription) {
+      <p>{{ stepDescription }}</p>
+    }
+  </div>
+
+  <form [formGroup]="formGroup" class="form-grid">
+    @for (control of controls; track control.name) {
+      <!-- TEXT INPUT -->
+      @if (control.type === 'text') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <input
+            [id]="control.name"
+            type="text"
+            [formControlName]="control.name"
+            [class.invalid]="isInvalid(control.name)"
+            [disabled]="!isEditing"
+            [placeholder]="control.description" />
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- EMAIL -->
+      @if (control.type === 'email') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <input
+            [id]="control.name"
+            type="email"
+            [formControlName]="control.name"
+            [class.invalid]="isInvalid(control.name)"
+            [disabled]="!isEditing"
+            [placeholder]="control.description" />
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- PHONE / TEL -->
+      @if (control.type === 'tel') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <input
+            [id]="control.name"
+            type="tel"
+            [formControlName]="control.name"
+            [class.invalid]="isInvalid(control.name)"
+            [disabled]="!isEditing"
+            [placeholder]="control.description" />
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- DATE -->
+      @if (control.type === 'date') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <input
+            [id]="control.name"
+            type="date"
+            [formControlName]="control.name"
+            [class.invalid]="isInvalid(control.name)"
+            [disabled]="!isEditing" />
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- NUMBER -->
+      @if (control.type === 'number') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <input
+            [id]="control.name"
+            type="number"
+            [formControlName]="control.name"
+            [class.invalid]="isInvalid(control.name)"
+            [disabled]="!isEditing"
+            [placeholder]="control.description" />
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- SELECT -->
+      @if (control.type === 'select') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <select
+            [id]="control.name"
+            [formControlName]="control.name"
+            (change)="onSelectChange(control, $any($event.target).value)"
+            [class.invalid]="isInvalid(control.name)"
+            [disabled]="!isEditing">
+            <option value="">-- {{ control.description || 'Select' }} --</option>
+            @for (option of getOptionsForControl(control); track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- COMBOBOX -->
+      @if (control.type === 'combobox') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <div class="combobox-wrapper">
+            <input
+              [id]="control.name"
+              type="text"
+              [formControlName]="control.name"
+              (input)="onComboboxInput(control, $any($event.target).value)"
+              (blur)="closeSuggestions(control.name)"
+              [class.invalid]="isInvalid(control.name)"
+              [disabled]="!isEditing"
+              autocomplete="off"
+              [placeholder]="control.description" />
+
+            @if ((suggestionMap[control.name] || []).length > 0) {
+              <ul class="suggestions-list" [class.active]="activeCombobox === control.name">
+                @for (option of suggestionMap[control.name]; track option.value) {
+                  <li>
+                    <button
+                      type="button"
+                      (click)="selectSuggestion(control, option)"
+                      (mousedown)="$event.preventDefault()">
+                      {{ option.label }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (isInvalid(control.name)) {
+              <span class="error-msg">{{ control.label }} is required</span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- RADIO -->
+      @if (control.type === 'radio') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label>{{ control.label }}</label>
+          <div class="radio-group">
+            @for (option of getOptionsForControl(control); track option.value) {
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  [value]="option.value"
+                  [formControlName]="control.name"
+                  [disabled]="!isEditing"
+                  (change)="onSelectChange(control, option.value)" />
+                {{ option.label }}
+              </label>
+            }
+          </div>
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- CHECKBOX -->
+      @if (control.type === 'check') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label>{{ control.label }}</label>
+          <div class="checkbox-group">
+            @for (option of getOptionsForControl(control); track option.value) {
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [value]="option.value"
+                  [formControlName]="control.name"
+                  [disabled]="!isEditing" />
+                {{ option.label }}
+              </label>
+            }
+          </div>
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+
+      <!-- TEXTAREA -->
+      @if (control.type === 'textarea') {
+        <div class="form-group" [class.span-2]="isSpan2(control)">
+          <label [for]="control.name">{{ control.label }}</label>
+          <textarea
+            [id]="control.name"
+            [formControlName]="control.name"
+            [class.invalid]="isInvalid(control.name)"
+            [disabled]="!isEditing"
+            rows="4"
+            [placeholder]="control.description"></textarea>
+          @if (isInvalid(control.name)) {
+            <span class="error-msg">{{ control.label }} is required</span>
+          }
+        </div>
+      }
+    }
+  </form>
+</div>
