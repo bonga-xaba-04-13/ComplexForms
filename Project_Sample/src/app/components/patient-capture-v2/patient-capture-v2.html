@@ -89,19 +89,109 @@
       </div>
 
       <!-- ── STAGE ───────────────────────────────────────────────────────── -->
-      <!-- The child DynamicForm renders the correct fields for the active    -->
-      <!-- step + active tab combination. Same 7 steps, two participants.    -->
+      <!-- Form-group-specific components render based on form type.         -->
+      <!-- Each component handles its own fields, validation, and logic.     -->
       <div class="auto__form-panels" #panelsScroll>
 
-        <app-dynamic-form
-          [controls]="activeControls"
-          [formGroup]="activeFormGroup"
-          [stepLabel]="currentStepDef?.formLabel || ''"
-          [stepDescription]="currentStepDef?.formDescription || ''"
-          [isPartner]="activeTab === 'partner'"
-          [isEditing]="true"
-          (maritalChanged)="onMaritalChange($event)">
-        </app-dynamic-form>
+        @switch (getFormGroupType(currentStepDef)) {
+          <!-- Personal Information -->
+          @case ('personal') {
+            <app-personal-info-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true"
+              (fieldChanged)="onFieldChanged($event)">
+            </app-personal-info-form>
+          }
+
+          <!-- Contact Details -->
+          @case ('contact') {
+            <app-contact-info-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true">
+            </app-contact-info-form>
+          }
+
+          <!-- Medical History -->
+          @case ('medical') {
+            <app-medical-history-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true">
+            </app-medical-history-form>
+          }
+
+          <!-- Medications -->
+          @case ('medications') {
+            <app-medications-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true">
+            </app-medications-form>
+          }
+
+          <!-- Lifestyle & Social -->
+          @case ('lifestyle') {
+            <app-lifestyle-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true">
+            </app-lifestyle-form>
+          }
+
+          <!-- Insurance & Financial -->
+          @case ('insurance') {
+            <app-insurance-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true">
+            </app-insurance-form>
+          }
+
+          <!-- Emergency Contacts -->
+          @case ('emergency') {
+            <app-emergency-contacts-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true">
+            </app-emergency-contacts-form>
+          }
+
+          <!-- Fallback to generic for unknown types -->
+          @default {
+            <app-dynamic-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [isPartner]="activeTab === 'partner'"
+              [isEditing]="true"
+              (maritalChanged)="onMaritalChange($event)">
+            </app-dynamic-form>
+          }
+        }
 
       </div>
 

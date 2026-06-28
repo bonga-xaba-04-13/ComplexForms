@@ -8,13 +8,30 @@ import { JsonFormControl } from '../../models/form-fields';
 import { DynamicForm } from './dynamic-form/dynamic-form';
 import { FormService } from '../../services/form.service';
 import { FormGroupRegistry } from './form-groups/form-group-registry';
+import { PersonalInfoForm } from './form-groups/personal-info-form/personal-info-form';
+import { ContactInfoForm } from './form-groups/contact-info-form/contact-info-form';
+import { MedicalHistoryForm } from './form-groups/medical-history-form/medical-history-form';
+import { MedicationsForm } from './form-groups/medications-form/medications-form';
+import { LifestyleForm } from './form-groups/lifestyle-form/lifestyle-form';
+import { InsuranceForm } from './form-groups/insurance-form/insurance-form';
+import { EmergencyContactsForm } from './form-groups/emergency-contacts-form/emergency-contacts-form';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 @Component({
   standalone: true,
   selector: 'app-patient-capture-v2',
-  imports: [CommonModule, DynamicForm],
+  imports: [
+    CommonModule,
+    DynamicForm,
+    PersonalInfoForm,
+    ContactInfoForm,
+    MedicalHistoryForm,
+    MedicationsForm,
+    LifestyleForm,
+    InsuranceForm,
+    EmergencyContactsForm
+  ],
   templateUrl: './patient-capture-v2.html',
   styleUrl: './patient-capture-v2.scss',
 })
@@ -177,6 +194,15 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
 
   private scrollTop(): void {
     this.panelsScroll?.nativeElement?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Field Changes from Child Components ────────────────────────────────
+
+  onFieldChanged(event: { fieldName: string; value: any }): void {
+    // Handle marital status change from PersonalInfoForm
+    if (event.fieldName === 'maritalStatus') {
+      this.onMaritalChange(event.value);
+    }
   }
 
   // ── Marital status ──────────────────────────────────────────────────────────
