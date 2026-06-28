@@ -6,7 +6,7 @@
       <div>
         <div class="auto__header-title">Patient Intake Registration</div>
         <div class="auto__header-sub">
-          Step {{ currentStep + 1 }} of {{ TOTAL }} — {{ currentStepDef.label }}
+          Step {{ currentStep + 1 }} of {{ TOTAL }} — {{ currentStepDef?.formLabel || 'Loading...' }}
           @if (showPartnerTab) {
             <span class="auto__header-badge">&#9679; Married capture</span>
           }
@@ -20,7 +20,7 @@
       <div class="auto__progress-bar-fill" [style.width.%]="progressPercent"></div>
     </div>
     <div class="auto__progress-meta">
-      <span class="auto__progress-label">{{ currentStepDef.label }}</span>
+      <span class="auto__progress-label">{{ currentStepDef?.formLabel || 'Loading...' }}</span>
       <span class="auto__progress-pct">{{ progressPercent }}%</span>
     </div>
   </div>
@@ -32,14 +32,14 @@
     <nav class="auto__sidebar" aria-label="Form sections">
       <div class="auto__sidebar-heading">Sections</div>
 
-      @for (step of STEP_DEFS; track step.id; let i = $index) {
+      @for (step of LoadedSteps; track $index; let i = $index) {
         <button
           class="auto__step-btn"
           [class.auto__step-active]="i === currentStep"
           [class.auto__step-complete]="completedSteps.has(i)"
           (click)="goToStep(i)">
           <span class="auto__step-num">{{ i + 1 }}</span>
-          <span class="auto__step-label">{{ step.label }}</span>
+          <span class="auto__step-label">{{ step[0]?.formLabel }}</span>
           @if (completedSteps.has(i)) {
             <span class="auto__step-status">&#10003;</span>
           }
@@ -96,8 +96,8 @@
         <app-dynamic-form
           [controls]="activeControls"
           [formGroup]="activeFormGroup"
-          [stepLabel]="currentStepDef.label"
-          [stepDescription]="currentStepDef.description"
+          [stepLabel]="currentStepDef?.formLabel || ''"
+          [stepDescription]="currentStepDef?.formDescription || ''"
           [isPartner]="activeTab === 'partner'"
           [isEditing]="true"
           (maritalChanged)="onMaritalChange($event)">
