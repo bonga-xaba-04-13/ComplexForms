@@ -47,7 +47,7 @@ export class EmergencyContactsForm extends BaseFormGroup implements OnChanges, O
 
     // Handle relationship search from DB
     if ((control as any).categoryId === 'relationship') {
-      this.formService.searchComboboxOptions('relationship', value)
+      this.formService.searchOptions('relationship', value)
         .pipe(takeUntil(this.destroy$))
         .subscribe(options => {
           this.suggestionMap[control.name] = options.slice(0, 8);

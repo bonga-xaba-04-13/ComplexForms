@@ -64,7 +64,7 @@ export class ContactInfoForm extends BaseFormGroup implements OnChanges, OnInit,
 
     // Handle city search from DB
     if ((control as any).categoryId === 'city') {
-      this.formService.searchComboboxOptions('p_city', value)
+      this.formService.searchOptions('city', value)
         .pipe(takeUntil(this.destroy$))
         .subscribe(options => {
           this.suggestionMap[control.name] = options.slice(0, 8);

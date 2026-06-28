@@ -14,7 +14,7 @@ interface ComboboxOption {
 })
 export class FormService {
   private apiUrl = 'http://localhost:8080/api/forms';
-  private optionsUrl = 'http://localhost:8080/api/options';
+  private optionsUrl = 'http://localhost:8080/api/lookups';
 
   // Cache for select/combobox options to avoid redundant DB calls
   private optionsCache = new Map<string, Observable<ComboboxOption[]>>();
@@ -68,6 +68,15 @@ export class FormService {
       catchError(() => of([])) // Return empty array on error
     );
   }
+  searchOptions(fieldName: string, searchQuery: string): Observable<ComboboxOption[]> {
+    const params = { value: searchQuery };
+    return this.http.get<ComboboxOption[]>(
+      `${this.optionsUrl}/${fieldName}`,
+      { params: params as any }
+    ).pipe(
+      catchError(() => of([])) // Return empty array on error
+    );
+  }
 
   /**
    * Get all select options for a field from DB.
@@ -108,7 +117,7 @@ export class FormService {
 
     // Fetch from DB and cache result
     const request$ = this.http.get<ComboboxOption[]>(
-      `${this.optionsUrl}/category/${categoryId}`
+      `${this.optionsUrl}/${categoryId}`
     ).pipe(
       shareReplay(1), // Share result among subscribers and cache
       catchError(() => of([])) // Return empty array on error

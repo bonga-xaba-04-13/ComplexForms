@@ -72,7 +72,8 @@ export class PersonalInfoForm extends BaseFormGroup implements OnChanges, OnInit
     // Handle nationality/language search from DB
     const categoryId = (control as any).categoryId;
     if (categoryId === 'nationality' || categoryId === 'language') {
-      this.formService.searchComboboxOptions(control.name, value)
+      const clean_cate = control.name.split('p_')[1]
+      this.formService.searchOptions(clean_cate, value)
         .pipe(takeUntil(this.destroy$))
         .subscribe(options => {
           this.suggestionMap[control.name] = options.slice(0, 8);
