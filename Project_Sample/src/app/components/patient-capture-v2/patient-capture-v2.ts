@@ -15,6 +15,8 @@ import { MedicationsForm } from './form-groups/medications-form/medications-form
 import { LifestyleForm } from './form-groups/lifestyle-form/lifestyle-form';
 import { InsuranceForm } from './form-groups/insurance-form/insurance-form';
 import { EmergencyContactsForm } from './form-groups/emergency-contacts-form/emergency-contacts-form';
+import { PayloadBuilder } from './payload/payload-builder.service';
+import { StepSnapshot, StepGroupedPayload, ParticipantPayload } from './payload/payload.types';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -57,6 +59,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private formService: FormService,
+    private payloadBuilder: PayloadBuilder,
     private dialogRef: MatDialogRef<PatientCaptureV2>,
     @Inject(MAT_DIALOG_DATA) public data: { title?: string },
     private cdr: ChangeDetectorRef
@@ -223,6 +226,23 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     this.showToast('Draft saved successfully');
   }
 
+  /**
+   * Convert FormGroup arrays to StepSnapshot array for payload building.
+   * This is the adapter between PatientCaptureV2's internal state and PayloadBuilder.
+   */
+  private toStepSnapshots(): StepSnapshot[] {
+    return this.LoadedSteps.map((stepArray, index) => {
+      const formDef = stepArray[0];
+      return {
+        stepName: formDef.keyname || `step_${index}`,
+        stepLabel: formDef.formLabel,
+        allowDynamicParticipants: formDef.allowDynamicParticipants || false,
+        patient: this.patientForms[index]?.value || {},
+        partner: this.partnerForms[index]?.value || {}
+      };
+    });
+  }
+
   submitForm(): void {
     const allValid = this.patientForms.every(f => f.valid);
     if (!allValid) {
@@ -230,13 +250,40 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
       this.showToast('Please complete all required fields');
       return;
     }
-    const payload = {
-      patient: this.patientForms.map(f => f.value),
-      partner: this.showPartnerTab ? this.partnerForms.map(f => f.value) : null,
+
+    // Optional: Validate partner forms if married
+    if (this.showPartnerTab) {
+      const partnerValid = this.partnerForms.every(f => Object.keys(f.value).length === 0 || f.valid);
+      if (!partnerValid) {
+        this.partnerForms.forEach(f => f.markAllAsTouched());
+        this.showToast('Please complete all partner fields');
+        return;
+      }
+    }
+
+    // Convert FormGroup data to step snapshots
+    const snapshots = this.toStepSnapshots();
+
+    // Build both payload formats
+    const formatA: StepGroupedPayload = this.payloadBuilder.buildStepGroupedPayload(snapshots);
+    const formatB: ParticipantPayload = this.payloadBuilder.buildParticipantPayload(snapshots);
+
+    // Log both formats for debugging
+    console.log('PatientCaptureV2 - Format A (Backend):', formatA);
+    console.log('PatientCaptureV2 - Format B (Audit):', formatB);
+
+    // Close dialog with both payloads
+    const result = {
+      backend: formatA,
+      audit: formatB,
+      legacyFormat: {
+        patient: this.patientForms.map(f => f.value),
+        partner: this.showPartnerTab ? this.partnerForms.map(f => f.value) : null,
+      }
     };
-    console.log('PatientCaptureV2 submitted:', payload);
+
     this.showToast('Patient record submitted successfully!');
-    setTimeout(() => this.dialogRef.close(payload), 1200);
+    setTimeout(() => this.dialogRef.close(result), 1200);
   }
 
   close(): void {
