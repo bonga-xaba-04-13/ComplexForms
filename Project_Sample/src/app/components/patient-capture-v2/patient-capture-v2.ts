@@ -281,6 +281,24 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
   }
 
   /**
+   * Save simplified draft (only non-empty values, no metadata).
+   * Mirrors the backend payload structure.
+   */
+  saveSimpleDraft(): void {
+    try {
+      const snapshots = this.toStepSnapshots();
+      const captureMode = this.showPartnerTab ? 'married' : 'single';
+
+      this.draftService.saveSimpleDraft(snapshots, captureMode);
+      this.showToast('Draft saved', 2000);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.showToast(`Failed to save draft: ${errorMsg}`, 3500);
+      console.error('Draft save failed:', error);
+    }
+  }
+
+  /**
    * Convert FormGroup arrays to StepSnapshot array for payload building.
    * This is the adapter between PatientCaptureV2's internal state and PayloadBuilder.
    */

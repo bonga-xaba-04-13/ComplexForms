@@ -5,7 +5,8 @@ import {
   DraftMetadata,
   DraftSizeInfo,
   RestoreContext,
-  StepSnapshot
+  StepSnapshot,
+  ParticipantValues
 } from '../payload/payload.types';
 
 /**
@@ -21,6 +22,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DraftService {
   private readonly KEY = 'patient_capture_draft';
+  private readonly SIMPLE_KEY = 'patient_capture_draft_simple';
   private readonly SCHEMA_VERSION = 1;
   private readonly QUOTA_LIMIT = 5 * 1024 * 1024; // 5MB estimate
 
@@ -154,6 +156,97 @@ export class DraftService {
   }
 
   /**
+   * Save simplified draft (format mirrors backend payload, no metadata).
+   * Stores only non-empty form values in a single compact structure.
+   *
+   * @param snapshots Form step snapshots from PatientCaptureV2
+   * @param captureMode 'single' or 'married'
+   * @throws Error if save fails
+   */
+  saveSimpleDraft(
+    snapshots: StepSnapshot[],
+    captureMode: 'single' | 'married'
+  ): void {
+    try {
+      const payload: Record<string, ParticipantValues[]> = {};
+
+      for (const snap of snapshots) {
+        const patientValues = this.omitEmpty(snap.patient);
+        const partnerValues = snap.allowDynamicParticipants
+          ? this.omitEmpty(snap.partner)
+          : null;
+
+        // Skip steps where both patient and partner are empty
+        const hasData =
+          Object.keys(patientValues).length > 0 ||
+          (partnerValues && Object.keys(partnerValues).length > 0);
+        if (!hasData) continue;
+
+        const arr: ParticipantValues[] = [patientValues];
+        if (partnerValues && Object.keys(partnerValues).length > 0) {
+          arr.push(partnerValues);
+        }
+        payload[snap.stepName] = arr;
+      }
+
+      const draft = {
+        captureMode,
+        schemaVersion: this.SCHEMA_VERSION,
+        payload
+      };
+
+      localStorage.setItem(this.SIMPLE_KEY, JSON.stringify(draft));
+    } catch (error) {
+      throw new Error(`Failed to save simple draft: ${error}`);
+    }
+  }
+
+  /**
+   * Restore simplified draft from localStorage.
+   * Returns null if no valid draft exists.
+   *
+   * @returns Object with captureMode and snapshots, or null
+   */
+  restoreSimpleDraft(): {
+    captureMode: 'single' | 'married';
+    snapshots: StepSnapshot[];
+  } | null {
+    try {
+      const raw = localStorage.getItem(this.SIMPLE_KEY);
+      if (!raw) {
+        return null;
+      }
+
+      const draft = JSON.parse(raw) as {
+        captureMode: 'single' | 'married';
+        schemaVersion?: number;
+        payload: Record<string, ParticipantValues[]>;
+      };
+
+      if (!draft?.payload) {
+        return null;
+      }
+
+      const snapshots: StepSnapshot[] = Object.entries(draft.payload).map(
+        ([stepName, values]) => ({
+          stepName,
+          allowDynamicParticipants: values.length > 1,
+          patient: values[0] ?? {},
+          partner: values[1] ?? {}
+        })
+      );
+
+      return {
+        captureMode: draft.captureMode,
+        snapshots
+      };
+    } catch (error) {
+      console.error('Failed to parse simple draft:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get current draft size in bytes and as percentage of quota.
    *
    * @returns Size information or null if no draft exists
@@ -186,6 +279,17 @@ export class DraftService {
       error.name === 'QuotaExceededError' ||
       error.message.includes('quota') ||
       error.message.includes('storage')
+    );
+  }
+
+  /**
+   * Remove null, empty string, and undefined values from an object.
+   */
+  private omitEmpty(values: ParticipantValues): ParticipantValues {
+    return Object.fromEntries(
+      Object.entries(values).filter(
+        ([, v]) => v !== null && v !== '' && v !== undefined
+      )
     );
   }
 
