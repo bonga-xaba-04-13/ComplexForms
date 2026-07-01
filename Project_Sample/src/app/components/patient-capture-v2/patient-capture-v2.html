@@ -219,17 +219,37 @@
         &#8592; Previous
       </button>
       @if (!isLastStep) {
-        <button class="auto__btn auto__btn-primary" (click)="next()">
+        <button class="auto__btn auto__btn-primary" (click)="nextStepWithValidation()">
           Next &#8594;
         </button>
       } @else {
-        <button class="auto__btn auto__btn-success" (click)="submitForm()">
+        <button class="auto__btn auto__btn-success" (click)="submitFormWithFeedback()">
           &#10003; Submit
         </button>
       }
       <button class="auto__btn auto__btn-ghost" (click)="close()">&#10005; Close</button>
     </div>
   </div>
+
+  <!-- Error Modal -->
+  @if (errorModalVisible) {
+    <div class="auto__modal-overlay" (click)="closeErrorModal()">
+      <div class="auto__modal" (click)="$event.stopPropagation()">
+        <div class="auto__modal-header">
+          <h3>⚠️ Validation Errors</h3>
+          <button class="auto__modal-close" (click)="closeErrorModal()">&times;</button>
+        </div>
+        <div class="auto__modal-body">
+          <pre>{{ errorModalMessage }}</pre>
+        </div>
+        <div class="auto__modal-footer">
+          <button class="auto__btn auto__btn-primary" (click)="closeErrorModal()">
+            Understood, Fix Errors
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Toast notification -->
   <div class="auto__toast" [class.auto__toast-show]="toastVisible">{{ toastMsg }}</div>

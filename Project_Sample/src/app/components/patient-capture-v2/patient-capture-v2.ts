@@ -18,6 +18,7 @@ import { EmergencyContactsForm } from './form-groups/emergency-contacts-form/eme
 import { PayloadBuilder } from './payload/payload-builder.service';
 import { StepSnapshot, StepGroupedPayload, ParticipantPayload, DraftMetadata } from './payload/payload.types';
 import { DraftService } from './services/draft.service';
+import { ValidationService, ValidationError } from './services/validation.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -52,6 +53,8 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
 
   toastMsg = '';
   toastVisible = false;
+  errorModalVisible = false;
+  errorModalMessage = '';
 
   @ViewChild('panelsScroll') panelsScroll!: ElementRef<HTMLElement>;
 
@@ -62,6 +65,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     private formService: FormService,
     private payloadBuilder: PayloadBuilder,
     private draftService: DraftService,
+    private validationService: ValidationService,
     private dialogRef: MatDialogRef<PatientCaptureV2>,
     @Inject(MAT_DIALOG_DATA) public data: { title?: string },
     private cdr: ChangeDetectorRef
@@ -226,6 +230,61 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     this.scrollTop();
   }
 
+  /**
+   * Enhanced next step with validation feedback.
+   * Validates current step and warns if prior steps are incomplete.
+   */
+  nextStepWithValidation(): void {
+    if (this.isLastStep) return;
+
+    const formLabels = this.LoadedSteps.map((step: any) => step[0]?.formLabel || 'Unknown');
+
+    // Validate current step first
+    const currentStepForm = this.activeTab === 'patient'
+      ? this.patientForms[this.currentStep]
+      : this.partnerForms[this.currentStep];
+
+    const currentValidation = this.validationService.validateCurrentStep(
+      currentStepForm,
+      this.currentStep,
+      formLabels[this.currentStep],
+      this.activeTab
+    );
+
+    // If current step invalid, show specific errors and block navigation
+    if (!currentValidation.isValid) {
+      this.showErrorModal(
+        `Step ${this.currentStep + 1} has errors:\n\n${this.validationService.formatErrorsForDisplay(currentValidation.errors)}\n\nPlease fix these issues before proceeding.`
+      );
+      currentStepForm.markAllAsTouched();
+      return;
+    }
+
+    // Check for incomplete prior steps
+    const priorStepsValidation = this.validationService.validateAllPatientForms(
+      this.patientForms,
+      formLabels,
+      this.currentStep - 1
+    );
+
+    if (!priorStepsValidation.isValid) {
+      const priorErrors = priorStepsValidation.errors;
+      const firstInvalidStep = priorErrors[0]?.stepIndex ?? this.currentStep;
+
+      this.showToast(
+        `⚠️ Step ${firstInvalidStep + 1} has incomplete fields. Continue anyway?`,
+        5000
+      );
+      // Allow user to continue despite prior step issues
+    }
+
+    // Proceed to next step
+    this.completedSteps = new Set([...this.completedSteps, this.currentStep]);
+    this.currentStep++;
+    this.activeTab = 'patient';
+    this.scrollTop();
+  }
+
   previous(): void {
     if (this.isFirstStep) return;
     this.currentStep--;
@@ -358,6 +417,64 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     setTimeout(() => this.dialogRef.close(result), 1200);
   }
 
+  /**
+   * Enhanced submit with detailed validation feedback.
+   * Validates all forms and shows specific field-level errors.
+   */
+  submitFormWithFeedback(): void {
+    const formLabels = this.LoadedSteps.map((step: any) => step[0]?.formLabel || 'Unknown');
+
+    // Validate all patient forms
+    const patientValidation = this.validationService.validateAllPatientForms(
+      this.patientForms,
+      formLabels
+    );
+
+    if (!patientValidation.isValid) {
+      this.patientForms.forEach(f => f.markAllAsTouched());
+      this.showErrorModal(
+        `Please fix the following errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(patientValidation.errors)}`
+      );
+      return;
+    }
+
+    // Validate partner forms if married
+    if (this.showPartnerTab) {
+      const partnerErrors = this.validationService.validateAllPartnerForms(
+        this.partnerForms,
+        formLabels
+      );
+
+      if (partnerErrors.length > 0) {
+        this.partnerForms.forEach(f => f.markAllAsTouched());
+        this.showErrorModal(
+          `Please fix partner form errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(partnerErrors)}`
+        );
+        return;
+      }
+    }
+
+    // All valid, submit
+    const snapshots = this.toStepSnapshots();
+    const formatA: StepGroupedPayload = this.payloadBuilder.buildStepGroupedPayload(snapshots);
+    const formatB: ParticipantPayload = this.payloadBuilder.buildParticipantPayload(snapshots);
+
+    console.log('PatientCaptureV2 - Format A (Backend):', formatA);
+    console.log('PatientCaptureV2 - Format B (Audit):', formatB);
+
+    const result = {
+      backend: formatA,
+      audit: formatB,
+      legacyFormat: {
+        patient: this.patientForms.map(f => f.value),
+        partner: this.showPartnerTab ? this.partnerForms.map(f => f.value) : null,
+      }
+    };
+
+    this.showToast('Patient record submitted successfully!');
+    setTimeout(() => this.dialogRef.close(result), 1200);
+  }
+
   close(): void {
     this.dialogRef.close();
   }
@@ -366,6 +483,23 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     this.toastMsg = msg;
     this.toastVisible = true;
     setTimeout(() => (this.toastVisible = false), ms);
+  }
+
+  showErrorModal(message: string): void {
+    this.errorModalMessage = message;
+    this.errorModalVisible = true;
+  }
+
+  closeErrorModal(): void {
+    this.errorModalVisible = false;
+  }
+
+  /**
+   * Navigate to a specific step from error message
+   */
+  goToStepFromError(stepIndex: number): void {
+    this.goToStep(stepIndex);
+    this.closeErrorModal();
   }
 
   @HostListener('document:keydown.escape')
