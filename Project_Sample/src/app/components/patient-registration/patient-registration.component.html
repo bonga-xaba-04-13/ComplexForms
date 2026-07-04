@@ -1,0 +1,93 @@
+<div class="patient-registration-container">
+  <!-- Main Content -->
+  <div class="content-wrapper">
+    <!-- Left Navigation -->
+    <div class="nav-section">
+      <div class="nav-title">Steps</div>
+      <div class="nav-buttons">
+        <button
+          *ngFor="let step of steps; let i = index"
+          [class.active]="currentStep === i"
+          [class.completed]="completedSteps.has(i)"
+          [disabled]="!isStepAccessible(i)"
+          (click)="goToStep(i)"
+          class="nav-btn"
+        >
+          {{ step.title }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Form -->
+    <div class="form-section">
+      <div *ngIf="loadingForms" style="text-align: center; padding: 40px;">
+        Loading form...
+      </div>
+
+      <div *ngIf="!loadingForms" class="form-content">
+        <div class="form-header">
+          <h1 class="form-title">{{ currentStepData?.title }}</h1>
+          <p class="form-subtitle">{{ currentStepData?.subtitle }}</p>
+        </div>
+
+        <div *ngIf="currentStepData" [formGroup]="forms[currentStep]">
+          <div class="form-row full" *ngFor="let field of currentStepData.fields">
+            <app-form-control-renderer
+              [control]="field"
+              [form]="forms[currentStep]"
+            ></app-form-control-renderer>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-section">
+    <div class="footer-info">{{ stepProgress }}</div>
+    <div class="footer-buttons">
+      <button
+        class="btn-secondary"
+        [disabled]="currentStep === 0"
+        (click)="previousStep()"
+      >
+        ← Previous
+      </button>
+      <button
+        *ngIf="!isLastStep"
+        class="btn-primary"
+        (click)="nextStep()"
+      >
+        Next →
+      </button>
+      <button
+        *ngIf="isLastStep"
+        class="btn-success"
+        (click)="submitForm()"
+      >
+        ✓ Submit
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div *ngIf="toastVisible" [class]="'toast ' + toastType">
+    {{ toastMessage }}
+  </div>
+
+  <!-- Error Modal -->
+  <div *ngIf="errorModalVisible" class="error-modal-overlay">
+    <div class="error-modal">
+      <div class="error-title">Validation Error</div>
+      <div class="error-message">{{ errorModalMessage }}</div>
+      <div *ngIf="errorModalDetails.length > 0" class="error-details">
+        <ul>
+          <li *ngFor="let detail of errorModalDetails">{{ detail }}</li>
+        </ul>
+      </div>
+      <div class="error-actions">
+        <button class="btn-primary" (click)="closeErrorModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

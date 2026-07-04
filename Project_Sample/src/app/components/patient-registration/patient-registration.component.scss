@@ -1,0 +1,7 @@
+@use './shared/patient-registration-styles' as *;
+
+// Component-specific overrides if needed
+:host {
+  display: block;
+  height: 100%;
+}
