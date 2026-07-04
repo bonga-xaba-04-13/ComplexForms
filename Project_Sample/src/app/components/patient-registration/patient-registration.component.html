@@ -2,12 +2,10 @@
   <!-- Progress Bar Section -->
   <div class="progress-section">
     <div class="progress-bar-container">
-      <div class="progress-label">Step {{ currentStep + 1 }} of {{ steps.length }}</div>
-      <progress class="progress-bar" [value]="currentStep + 1" [max]="steps.length"></progress>
+      <div class="progress-label">Step {{ currentStep + 1 }} of {{ stepRefs.length }}</div>
+      <progress class="progress-bar" [value]="currentStep + 1" [max]="stepRefs.length"></progress>
     </div>
-    <button class="btn-close" (click)="closeDialog()" title="Close form">
-      ✕
-    </button>
+    <button class="btn-close" (click)="closeDialog()" title="Close form">✕</button>
   </div>
 
   <!-- Main Content -->
@@ -17,10 +15,10 @@
       <div class="nav-title">Steps</div>
       <div class="nav-buttons">
         <button
-          *ngFor="let step of steps; let i = index"
+          *ngFor="let step of stepRefs; let i = index"
           [class.active]="currentStep === i"
           [class.completed]="completedSteps.has(i)"
-          [disabled]="!isStepAccessible(i)"
+          [disabled]="!isStepAccessible(i) || stepperLoading"
           (click)="goToStep(i)"
           class="nav-btn"
         >
@@ -31,39 +29,60 @@
 
     <!-- Main Form -->
     <div class="form-section">
-      <!-- Loading State -->
-      <div *ngIf="loadingForms" class="loading-state">
+      <!-- Stepper Loading State -->
+      <div *ngIf="stepperLoading" class="loading-state">
         <div class="spinner"></div>
         <p>Loading patient registration form...</p>
       </div>
 
-      <!-- Error State -->
-      <div *ngIf="loadError && !loadingForms" class="error-state">
+      <!-- Stepper Error State -->
+      <div *ngIf="stepperError && !stepperLoading" class="error-state">
         <div class="error-icon">⚠️</div>
-        <p class="error-message">{{ loadErrorMessage }}</p>
-        <button class="btn-primary" (click)="retryLoadForms()">
-          Try Again
-        </button>
+        <p class="error-message">{{ stepperErrorMessage }}</p>
+        <button class="btn-primary" (click)="retryLoadStepper()">Try Again</button>
       </div>
 
-      <!-- Form Content -->
-      <div *ngIf="!loadingForms && !loadError" class="form-content">
+      <!-- Stepper Loaded: Show Per-Step Content -->
+      <div *ngIf="!stepperLoading && !stepperError" class="form-content">
         <div class="form-header">
-          <h1 class="form-title">{{ currentStepData?.title }}</h1>
-          <p class="form-subtitle">{{ currentStepData?.subtitle }}</p>
+          <h1 class="form-title">{{ stepRefs[currentStep]?.title }}</h1>
+          <p class="form-subtitle">{{ stepRefs[currentStep]?.subtitle }}</p>
         </div>
 
-        <div *ngIf="currentStepData" [formGroup]="forms[currentStep]" class="form-grid">
-          <div
-            *ngFor="let field of currentStepData.fields"
-            [class]="getFieldGridClass(field)"
-          >
-            <app-form-control-renderer
-              [control]="field"
-              [form]="forms[currentStep]"
-            ></app-form-control-renderer>
+        <!-- Per-Step State Machine -->
+        <ng-container [ngSwitch]="stepStates[currentStep]?.status">
+          <!-- Step Loading -->
+          <div *ngSwitchCase="'loading'" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading {{ stepRefs[currentStep]?.title }}...</p>
           </div>
-        </div>
+
+          <!-- Step Error -->
+          <div *ngSwitchCase="'error'" class="error-state">
+            <div class="error-icon">⚠️</div>
+            <p class="error-message">{{ stepStates[currentStep]?.errorMessage }}</p>
+            <button class="btn-primary" (click)="retryStep(currentStep)">Try Again</button>
+          </div>
+
+          <!-- Step Loaded: Show Form -->
+          <div *ngSwitchCase="'loaded'" [formGroup]="forms[currentStep]" class="form-grid">
+            <div *ngFor="let field of loadedSteps[currentStep]?.fields" [class]="getFieldGridClass(field)">
+              <app-form-control-renderer [control]="field" [form]="forms[currentStep]"></app-form-control-renderer>
+            </div>
+
+            <!-- Joint Capture Section (if enabled for this step) -->
+            <div *ngIf="loadedSteps[currentStep]?.allowDynamicParticipants" class="joint-capture-section">
+              <div class="role-tabs">
+                <button [class.active]="joint.activeRole === 'patient'" (click)="togglePartner(false)" class="tab-btn">
+                  Patient
+                </button>
+                <button [class.active]="joint.activeRole === 'partner'" (click)="togglePartner(true)" class="tab-btn">
+                  Partner
+                </button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
       </div>
     </div>
   </div>
@@ -74,7 +93,7 @@
     <div class="footer-buttons">
       <button
         class="btn-secondary"
-        [disabled]="currentStep === 0 || loadingForms"
+        [disabled]="currentStep === 0 || stepperLoading || stepStates[currentStep]?.status !== 'loaded'"
         (click)="previousStep()"
       >
         ← Previous
@@ -82,7 +101,7 @@
       <button
         *ngIf="!isLastStep"
         class="btn-primary"
-        [disabled]="loadingForms"
+        [disabled]="stepperLoading || stepStates[currentStep]?.status !== 'loaded'"
         (click)="nextStep()"
       >
         Next →
@@ -90,7 +109,7 @@
       <button
         *ngIf="isLastStep"
         class="btn-success"
-        [disabled]="loadingForms"
+        [disabled]="stepperLoading || stepStates[currentStep]?.status !== 'loaded'"
         (click)="submitForm()"
       >
         ✓ Submit
@@ -99,9 +118,7 @@
   </div>
 
   <!-- Toast Notification -->
-  <div *ngIf="toastVisible" [class]="'toast ' + toastType">
-    {{ toastMessage }}
-  </div>
+  <div *ngIf="toastVisible" [class]="'toast ' + toastType">{{ toastMessage }}</div>
 
   <!-- Error Modal -->
   <div *ngIf="errorModalVisible" class="error-modal-overlay">

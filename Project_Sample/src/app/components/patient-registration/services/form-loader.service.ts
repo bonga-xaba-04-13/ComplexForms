@@ -1,265 +1,137 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
-import { StepperFormDefinition } from '../models/index';
+import { Observable, of, throwError, timer } from 'rxjs';
+import { catchError, tap, timeout, retry, shareReplay, map } from 'rxjs/operators';
+import {
+  StepperResponse,
+  FormDefinitionResponse,
+  LoadedStep,
+} from '../models/index';
+import { parseAndValidateDefinition } from '../utils/definition-parser';
+import { MOCK_STEPPER, MOCK_STEP_FORMS } from '../mocks/form-mocks';
+
+const API_BASE = 'http://localhost:8080/api/forms';
+const API_TIMEOUT = 10_000;
+const RETRY_COUNT = 2;
+const RETRY_DELAY = 300;
 
 @Injectable({
   providedIn: 'root'
 })
 export class FormLoaderService {
+  private stepCache = new Map<string, Observable<LoadedStep>>();
+  private stepper$?: Observable<StepperResponse>;
+
   constructor(private http: HttpClient) {}
 
-  loadPatientRegistrationForms(): Observable<StepperFormDefinition> {
-    return this.http
-      .get<StepperFormDefinition>('/api/forms/patient_registration_stepper')
+  /**
+   * Load stepper skeleton once per session.
+   * Caches result for reuse.
+   */
+  loadStepper(): Observable<StepperResponse> {
+    if (this.stepper$) {
+      return this.stepper$;
+    }
+
+    this.stepper$ = this.http
+      .get<StepperResponse>(`${API_BASE}/patient_intake_stepper`)
       .pipe(
+        timeout(API_TIMEOUT),
+        retry({
+          count: RETRY_COUNT,
+          delay: () => timer(RETRY_DELAY),
+        }),
         tap((data) => {
-          console.log('Loaded patient registration stepper from API', data);
+          console.log('[FormLoaderService] Loaded stepper from API', data);
         }),
         catchError((error) => {
-          console.warn('Failed to load from API, using mock data', error);
-          return of(this.getMockStepperDefinition());
-        })
+          console.warn('[FormLoaderService] Failed to load stepper, using mock', error);
+          return of(MOCK_STEPPER);
+        }),
+        shareReplay(1)
       );
+
+    return this.stepper$;
   }
 
-  private getMockStepperDefinition(): StepperFormDefinition {
+  /**
+   * Lazy-load a step's form definition by formKeyname.
+   * Idempotent: multiple calls return cached Observable.
+   */
+  loadFormForStep(formKeyname: string): Observable<LoadedStep> {
+    if (this.stepCache.has(formKeyname)) {
+      return this.stepCache.get(formKeyname)!;
+    }
+
+    const request$ = this.http
+      .get<FormDefinitionResponse>(`${API_BASE}/${formKeyname}`)
+      .pipe(
+        timeout(API_TIMEOUT),
+        retry({
+          count: RETRY_COUNT,
+          delay: () => timer(RETRY_DELAY),
+        }),
+        map((res) => this.toLoadedStep(res)),
+        tap((loaded) => {
+          console.log('[FormLoaderService] Loaded form:', formKeyname, loaded);
+        }),
+        catchError((err) => this.fallbackOrFail(formKeyname, err)),
+        shareReplay(1)
+      );
+
+    this.stepCache.set(formKeyname, request$);
+    return request$;
+  }
+
+  /**
+   * Convert FormDefinitionResponse to LoadedStep.
+   */
+  private toLoadedStep(res: FormDefinitionResponse): LoadedStep {
+    const fields = parseAndValidateDefinition(res.definition, res.formKeyname);
     return {
-      totalSteps: 3,
-      steps: [
-        {
-          stepId: 0,
-          title: 'Personal Information',
-          subtitle: 'Enter your personal details',
-          fields: [
-            {
-              name: 'firstName',
-              label: 'First Name',
-              type: 'text',
-              placeholder: 'John',
-              required: true,
-            },
-            {
-              name: 'lastName',
-              label: 'Last Name',
-              type: 'text',
-              placeholder: 'Doe',
-              required: true,
-            },
-            {
-              name: 'middleName',
-              label: 'Middle Name',
-              type: 'text',
-              placeholder: 'Optional',
-              required: false,
-            },
-            {
-              name: 'suffix',
-              label: 'Suffix',
-              type: 'select',
-              required: false,
-              options: [
-                { label: 'None', value: '' },
-                { label: 'Jr.', value: 'jr' },
-                { label: 'Sr.', value: 'sr' },
-                { label: 'II', value: 'ii' },
-              ],
-            },
-            {
-              name: 'email',
-              label: 'Email Address',
-              type: 'email',
-              placeholder: 'john@example.com',
-              required: true,
-            },
-            {
-              name: 'phone',
-              label: 'Phone Number',
-              type: 'tel',
-              placeholder: '+1 (555) 123-4567',
-              required: true,
-            },
-            {
-              name: 'dob',
-              label: 'Date of Birth',
-              type: 'date',
-              required: true,
-            },
-            {
-              name: 'gender',
-              label: 'Gender',
-              type: 'select',
-              required: true,
-              options: [
-                { label: 'Male', value: 'male' },
-                { label: 'Female', value: 'female' },
-                { label: 'Other', value: 'other' },
-              ],
-            },
-            {
-              name: 'address',
-              label: 'Address',
-              type: 'text',
-              placeholder: '123 Main Street',
-              required: true,
-            },
-            {
-              name: 'city',
-              label: 'City',
-              type: 'text',
-              placeholder: 'New York',
-              required: true,
-            },
-            {
-              name: 'postalCode',
-              label: 'Postal Code',
-              type: 'text',
-              placeholder: '10001',
-              required: true,
-            },
-            {
-              name: 'preferredLanguage',
-              label: 'Preferred Language',
-              type: 'select',
-              required: false,
-              options: [
-                { label: 'English', value: 'english' },
-                { label: 'Spanish', value: 'spanish' },
-                { label: 'Mandarin', value: 'mandarin' },
-              ],
-            },
-          ],
-        },
-        {
-          stepId: 1,
-          title: 'Medical & Insurance Details',
-          subtitle: 'Provide your medical and insurance information',
-          fields: [
-            {
-              name: 'currentMedications',
-              label: 'Current Medications',
-              type: 'textarea',
-              placeholder: 'List medications...',
-              rows: 4,
-            },
-            {
-              name: 'drugAllergies',
-              label: 'Drug Allergies',
-              type: 'textarea',
-              placeholder: 'List drug allergies...',
-              rows: 4,
-            },
-            {
-              name: 'chronicConditions',
-              label: 'Chronic Conditions',
-              type: 'checkgroup',
-              options: [
-                { label: 'Diabetes', value: 'diabetes' },
-                { label: 'Hypertension', value: 'hypertension' },
-                { label: 'Asthma', value: 'asthma' },
-                { label: 'Heart Disease', value: 'heart-disease' },
-                { label: 'Arthritis', value: 'arthritis' },
-                { label: 'COPD', value: 'copd' },
-              ],
-            },
-            {
-              name: 'insuranceProvider',
-              label: 'Insurance Provider Name',
-              type: 'text',
-              placeholder: 'Blue Cross',
-            },
-            {
-              name: 'insuranceType',
-              label: 'Insurance Type',
-              type: 'select',
-              options: [
-                { label: 'HMO', value: 'hmo' },
-                { label: 'PPO', value: 'ppo' },
-                { label: 'Medicare', value: 'medicare' },
-              ],
-            },
-            {
-              name: 'policyNumber',
-              label: 'Policy Number',
-              type: 'text',
-              placeholder: 'Your policy number',
-            },
-            {
-              name: 'primaryCarePhysician',
-              label: 'Primary Care Physician Name',
-              type: 'text',
-              placeholder: 'Dr. Smith',
-            },
-          ],
-        },
-        {
-          stepId: 2,
-          title: 'Consent & Additional Information',
-          subtitle: 'Complete authorization and preferences',
-          fields: [
-            {
-              name: 'emergencyContactName',
-              label: 'Emergency Contact Name',
-              type: 'text',
-              placeholder: 'Contact Name',
-              required: true,
-            },
-            {
-              name: 'emergencyContactPhone',
-              label: 'Emergency Contact Phone',
-              type: 'tel',
-              placeholder: '+1 (555) 987-6543',
-              required: true,
-            },
-            {
-              name: 'relationship',
-              label: 'Relationship',
-              type: 'select',
-              required: true,
-              options: [
-                { label: 'Spouse', value: 'spouse' },
-                { label: 'Parent', value: 'parent' },
-                { label: 'Child', value: 'child' },
-                { label: 'Sibling', value: 'sibling' },
-              ],
-            },
-            {
-              name: 'consentToTreatment',
-              label: 'I consent to medical treatment',
-              type: 'radio',
-              required: true,
-              options: [
-                { label: 'Yes', value: 'yes' },
-                { label: 'No', value: 'no' },
-              ],
-            },
-            {
-              name: 'medicalRecordsAuthorization',
-              label: 'I authorize access to my medical records',
-              type: 'checkbox',
-              required: true,
-            },
-            {
-              name: 'hipaaAuthorization',
-              label: 'I acknowledge HIPAA privacy notice',
-              type: 'checkbox',
-              required: true,
-            },
-            {
-              name: 'preferredContactMethod',
-              label: 'Preferred Contact Method',
-              type: 'radio',
-              required: true,
-              options: [
-                { label: 'Phone Call', value: 'phone' },
-                { label: 'Email', value: 'email' },
-                { label: 'Text Message', value: 'text' },
-              ],
-            },
-          ],
-        },
-      ],
+      reference: {
+        stepId: -1,
+        formKeyname: res.formKeyname,
+        title: res.formLabel,
+        subtitle: res.formDescription,
+      },
+      meta: res,
+      fields,
+      allowDynamicParticipants: !!res.allowDynamicParticipants,
     };
+  }
+
+  /**
+   * On error: try mock fallback if available.
+   */
+  private fallbackOrFail(
+    formKeyname: string,
+    err: unknown
+  ): Observable<LoadedStep> {
+    const mock = MOCK_STEP_FORMS[formKeyname as keyof typeof MOCK_STEP_FORMS];
+    if (mock) {
+      console.warn(
+        `[FormLoaderService] Failed to load ${formKeyname}, using mock`,
+        err
+      );
+      return of(this.toLoadedStep(mock));
+    }
+
+    this.stepCache.delete(formKeyname);
+    console.error(`[FormLoaderService] Failed to load ${formKeyname}, no mock available`, err);
+    return throwError(() => ({
+      formKeyname,
+      message: 'FORM_NOT_FOUND',
+      originalError: err,
+    }));
+  }
+
+  /**
+   * Clear all caches (e.g., on logout).
+   */
+  clearCache(): void {
+    this.stepCache.clear();
+    this.stepper$ = undefined;
+    console.log('[FormLoaderService] Caches cleared');
   }
 }

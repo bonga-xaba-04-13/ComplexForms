@@ -4,7 +4,14 @@ import { FormGroup, FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FormControlRendererComponent } from './shared/form-control-renderer.component';
 import { FormLoaderService } from './services/form-loader.service';
-import { StepperFormDefinition, StepDefinition, Payload } from './models/index';
+import {
+  StepReference,
+  LoadedStep,
+  StepState,
+  JointCaptureData,
+  MultiParticipantPayload,
+  Participant,
+} from './models/index';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -16,11 +23,31 @@ import { takeUntil } from 'rxjs/operators';
   styleUrl: './patient-registration.component.scss',
 })
 export class PatientRegistrationComponent implements OnInit, OnDestroy {
+  // ===== Stepper Structure =====
+  stepRefs: StepReference[] = [];
+  loadedSteps: (LoadedStep | null)[] = [];
+  stepStates: StepState[] = [];
   currentStep = 0;
   completedSteps = new Set<number>();
-  forms: FormGroup[] = [];
-  steps: StepDefinition[] = [];
 
+  // ===== Form State =====
+  forms: FormGroup[] = [];
+  partnerForms: (FormGroup | null)[] = [];
+
+  // ===== Joint Capture =====
+  joint: JointCaptureData = {
+    enabled: false,
+    activeRole: 'patient',
+    partnerActive: false,
+    completedByRole: { patient: new Set(), partner: new Set() },
+  };
+
+  // ===== Stepper Loading =====
+  stepperLoading = true;
+  stepperError = false;
+  stepperErrorMessage = '';
+
+  // ===== UI State =====
   toastMessage = '';
   toastVisible = false;
   toastType: 'success' | 'error' | 'info' = 'success';
@@ -28,10 +55,6 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
   errorModalVisible = false;
   errorModalMessage = '';
   errorModalDetails: string[] = [];
-
-  loadingForms = true;
-  loadError = false;
-  loadErrorMessage = '';
 
   private destroy$ = new Subject<void>();
 
@@ -43,7 +66,7 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.loadFormDefinition();
+    this.loadStepper();
   }
 
   ngOnDestroy() {
@@ -51,70 +74,224 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadFormDefinition() {
+  /**
+   * Load stepper skeleton (step references only, no field definitions).
+   */
+  private loadStepper() {
+    this.stepperLoading = true;
     this.formLoaderService
-      .loadPatientRegistrationForms()
+      .loadStepper()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stepper) => {
-          this.initializeSteps(stepper);
-          this.loadingForms = false;
-          this.loadError = false;
+          this.onStepperLoaded(stepper);
+          this.stepperLoading = false;
+          this.stepperError = false;
         },
-        error: (error) => {
-          console.error('Error loading form definition:', error);
-          this.loadingForms = false;
-          this.loadError = true;
-          this.loadErrorMessage = 'Failed to load form. Please try again.';
+        error: (err) => {
+          console.error('Error loading stepper:', err);
+          this.stepperLoading = false;
+          this.stepperError = true;
+          this.stepperErrorMessage = 'Failed to load form. Please try again.';
         },
       });
   }
 
-  retryLoadForms() {
-    this.loadingForms = true;
-    this.loadError = false;
-    this.loadFormDefinition();
+  /**
+   * Initialize stepper: create step references, state arrays, and forms.
+   * Lazy-load step 0 immediately.
+   */
+  private onStepperLoaded(stepper: any) {
+    this.stepRefs = [...stepper.steps].sort(
+      (a, b) => (a.order ?? a.stepId) - (b.order ?? b.stepId)
+    );
+    this.loadedSteps = this.stepRefs.map(() => null);
+    this.stepStates = this.stepRefs.map(() => ({ status: 'idle' }));
+    this.forms = this.stepRefs.map(() => this.fb.group({}));
+    this.partnerForms = this.stepRefs.map(() => null);
+
+    // Eagerly load step 0; others load on-demand
+    this.ensureStepLoaded(this.currentStep);
   }
 
+  /**
+   * Lazy-load a step's form definition if not already loaded.
+   * Idempotent: calling multiple times won't re-fetch.
+   */
+  private ensureStepLoaded(index: number) {
+    const state = this.stepStates[index];
+    if (!state || state.status === 'loaded' || state.status === 'loading') {
+      return;
+    }
 
-  private initializeSteps(stepper: StepperFormDefinition) {
-    this.steps = stepper.steps;
-    this.forms = stepper.steps.map(() => this.fb.group({}));
+    const keyname = this.stepRefs[index].formKeyname;
+    this.stepStates[index] = { status: 'loading' };
+
+    this.formLoaderService
+      .loadFormForStep(keyname)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (loaded) => {
+          this.loadedSteps[index] = loaded;
+          this.stepStates[index] = { status: 'loaded' };
+          this.applyJointCapability(loaded);
+        },
+        error: (err) => {
+          this.stepStates[index] = {
+            status: 'error',
+            errorMessage: this.humanizeStepError(err),
+          };
+        },
+      });
   }
+
+  /**
+   * Called when user navigates to a new step.
+   */
+  private onStepChanged() {
+    this.ensureStepLoaded(this.currentStep);
+    // Optional: prefetch next step while user reads current one
+    if (this.currentStep < this.stepRefs.length - 1) {
+      const nextKeyname = this.stepRefs[this.currentStep + 1].formKeyname;
+      this.formLoaderService
+        .loadFormForStep(nextKeyname)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(); // fire-and-forget
+    }
+  }
+
+  /**
+   * Check if joint capture is possible for this step.
+   */
+  private applyJointCapability(loaded: LoadedStep) {
+    if (loaded.allowDynamicParticipants) {
+      this.joint.enabled = true;
+    }
+  }
+
+  /**
+   * User manually retries a failed step load.
+   */
+  retryStep(index: number) {
+    this.stepStates[index] = { status: 'idle' };
+    this.ensureStepLoaded(index);
+  }
+
+  /**
+   * Retry loading the stepper skeleton.
+   */
+  retryLoadStepper() {
+    this.loadStepper();
+  }
+
+  // ===== Navigation =====
 
   goToStep(stepIndex: number) {
-    if (this.isStepAccessible(stepIndex) && this.validateCurrentStep()) {
-      this.saveStepData();
-      this.currentStep = stepIndex;
+    if (!this.isStepAccessible(stepIndex)) {
+      return;
     }
+    if (this.stepStates[this.currentStep]?.status === 'loaded') {
+      if (!this.validateCurrentStep()) {
+        return;
+      }
+      this.saveStepData();
+    }
+    this.currentStep = stepIndex;
+    this.onStepChanged();
   }
 
   previousStep() {
     if (this.currentStep > 0) {
-      this.saveStepData();
+      if (this.stepStates[this.currentStep]?.status === 'loaded') {
+        this.saveStepData();
+      }
       this.currentStep--;
+      this.onStepChanged();
     }
   }
 
   nextStep() {
-    if (this.validateCurrentStep()) {
-      this.saveStepData();
-      this.completedSteps.add(this.currentStep);
-      if (this.currentStep < this.steps.length - 1) {
-        this.currentStep++;
-      }
+    if (this.stepStates[this.currentStep]?.status !== 'loaded') {
+      return;
+    }
+    if (!this.validateCurrentStep()) {
+      return;
+    }
+    this.saveStepData();
+    this.completedSteps.add(this.currentStep);
+    if (this.currentStep < this.stepRefs.length - 1) {
+      this.currentStep++;
+      this.onStepChanged();
     }
   }
 
   submitForm() {
-    if (this.validateCurrentStep()) {
-      this.saveStepData();
-      const payload = this.buildPayload();
-      this.showToast('Form submitted successfully!', 'success');
-      console.log('Form Payload:', payload);
-      // Here you would send the payload to your backend
+    if (this.stepStates[this.currentStep]?.status !== 'loaded') {
+      return;
     }
+    if (!this.validateCurrentStep()) {
+      return;
+    }
+    this.saveStepData();
+    this.completedSteps.add(this.currentStep);
+
+    const payload = this.buildPayload();
+    this.showToast('Form submitted successfully!', 'success');
+    console.log('Form Payload:', payload);
+    // Send to backend
   }
+
+  // ===== Form Data Management =====
+
+  private saveStepData() {
+    // FormGroup reactive forms automatically track data
+  }
+
+  private buildPayload(): MultiParticipantPayload {
+    const patientData: Record<string, any> = {};
+    this.stepRefs.forEach((ref, i) => {
+      patientData[ref.formKeyname] = this.forms[i]?.value ?? {};
+    });
+
+    const participants: Participant[] = [{ role: 'patient', forms: patientData }];
+
+    if (this.joint.partnerActive) {
+      const partnerData: Record<string, any> = {};
+      this.stepRefs.forEach((ref, i) => {
+        partnerData[ref.formKeyname] = this.partnerForms[i]?.value ?? {};
+      });
+      participants.push({ role: 'partner', forms: partnerData });
+    }
+
+    return {
+      stepperKeyname: 'patient_intake_stepper',
+      participants,
+      timestamp: new Date().toISOString(),
+      completed: true,
+    };
+  }
+
+  // ===== Joint Capture =====
+
+  togglePartner(active: boolean) {
+    this.joint.partnerActive = active;
+    if (active && !this.partnerForms[this.currentStep]) {
+      this.partnerForms[this.currentStep] = this.fb.group({});
+    }
+    this.joint.activeRole = active ? 'partner' : 'patient';
+  }
+
+  get activeForm(): FormGroup {
+    if (
+      this.joint.activeRole === 'partner' &&
+      this.partnerForms[this.currentStep]
+    ) {
+      return this.partnerForms[this.currentStep]!;
+    }
+    return this.forms[this.currentStep];
+  }
+
+  // ===== Validation =====
 
   private validateCurrentStep(): boolean {
     const form = this.forms[this.currentStep];
@@ -126,31 +303,6 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  private isCurrentStepComplete(): boolean {
-    return this.completedSteps.has(this.currentStep);
-  }
-
-  private saveStepData() {
-    // Form data is automatically managed by FormGroup
-  }
-
-  private buildPayload(): Payload {
-    const payload: any = {
-      step1: {},
-      step2: {},
-      step3: {},
-      timestamp: new Date().toISOString(),
-      completed: true,
-    };
-
-    this.forms.forEach((form, index) => {
-      const stepKey = `step${index + 1}`;
-      payload[stepKey] = form.value;
-    });
-
-    return payload;
-  }
-
   private getFormErrors(form: FormGroup): string[] {
     const errors: string[] = [];
     Object.keys(form.controls).forEach((key) => {
@@ -160,6 +312,33 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
       }
     });
     return errors;
+  }
+
+  isStepAccessible(stepIndex: number): boolean {
+    if (stepIndex <= this.currentStep) return true;
+    if (
+      stepIndex === this.currentStep + 1 &&
+      this.completedSteps.has(this.currentStep)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  // ===== UI Helpers =====
+
+  getFieldGridClass(field: any): string {
+    if (field.type === 'textarea' || field.type === 'checkgroup') {
+      return 'form-field full-width';
+    }
+    return 'form-field';
+  }
+
+  private humanizeStepError(err: any): string {
+    if (err?.message === 'FORM_NOT_FOUND') {
+      return 'Form definition not found. Please try again.';
+    }
+    return 'Failed to load this step. Please try again.';
   }
 
   private showErrorModal(message: string, details: string[]) {
@@ -181,36 +360,25 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
     }, 3000);
   }
 
-  get currentStepData(): StepDefinition | null {
-    return this.steps[this.currentStep] || null;
-  }
-
-  get canProceed(): boolean {
-    return this.currentStep < this.steps.length - 1;
-  }
-
-  get isLastStep(): boolean {
-    return this.currentStep === this.steps.length - 1;
-  }
-
-  get stepProgress(): string {
-    return `Step ${this.currentStep + 1} of ${this.steps.length}`;
-  }
-
-  isStepAccessible(stepIndex: number): boolean {
-    if (stepIndex <= this.currentStep) return true;
-    if (stepIndex === this.currentStep + 1 && this.isCurrentStepComplete()) return true;
-    return false;
-  }
-
-  closeDialog(): void {
+  closeDialog() {
     this.dialogRef.close();
   }
 
-  getFieldGridClass(field: any): string {
-    if (field.type === 'textarea' || field.type === 'checkgroup') {
-      return 'form-field full-width';
-    }
-    return 'form-field';
+  // ===== Computed Properties =====
+
+  get currentStepData(): LoadedStep | null {
+    return this.loadedSteps[this.currentStep] || null;
+  }
+
+  get canProceed(): boolean {
+    return this.currentStep < this.stepRefs.length - 1;
+  }
+
+  get isLastStep(): boolean {
+    return this.currentStep === this.stepRefs.length - 1;
+  }
+
+  get stepProgress(): string {
+    return `Step ${this.currentStep + 1} of ${this.stepRefs.length}`;
   }
 }
