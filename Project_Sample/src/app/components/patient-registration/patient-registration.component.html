@@ -1,4 +1,15 @@
 <div class="patient-registration-container">
+  <!-- Progress Bar Section -->
+  <div class="progress-section">
+    <div class="progress-bar-container">
+      <div class="progress-label">Step {{ currentStep + 1 }} of {{ steps.length }}</div>
+      <progress class="progress-bar" [value]="currentStep + 1" [max]="steps.length"></progress>
+    </div>
+    <button class="btn-close" (click)="closeDialog()" title="Close form">
+      ✕
+    </button>
+  </div>
+
   <!-- Main Content -->
   <div class="content-wrapper">
     <!-- Left Navigation -->
@@ -20,18 +31,33 @@
 
     <!-- Main Form -->
     <div class="form-section">
-      <div *ngIf="loadingForms" style="text-align: center; padding: 40px;">
-        Loading form...
+      <!-- Loading State -->
+      <div *ngIf="loadingForms" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading patient registration form...</p>
       </div>
 
-      <div *ngIf="!loadingForms" class="form-content">
+      <!-- Error State -->
+      <div *ngIf="loadError && !loadingForms" class="error-state">
+        <div class="error-icon">⚠️</div>
+        <p class="error-message">{{ loadErrorMessage }}</p>
+        <button class="btn-primary" (click)="retryLoadForms()">
+          Try Again
+        </button>
+      </div>
+
+      <!-- Form Content -->
+      <div *ngIf="!loadingForms && !loadError" class="form-content">
         <div class="form-header">
           <h1 class="form-title">{{ currentStepData?.title }}</h1>
           <p class="form-subtitle">{{ currentStepData?.subtitle }}</p>
         </div>
 
-        <div *ngIf="currentStepData" [formGroup]="forms[currentStep]">
-          <div class="form-row full" *ngFor="let field of currentStepData.fields">
+        <div *ngIf="currentStepData" [formGroup]="forms[currentStep]" class="form-grid">
+          <div
+            *ngFor="let field of currentStepData.fields"
+            [class]="getFieldGridClass(field)"
+          >
             <app-form-control-renderer
               [control]="field"
               [form]="forms[currentStep]"
@@ -48,7 +74,7 @@
     <div class="footer-buttons">
       <button
         class="btn-secondary"
-        [disabled]="currentStep === 0"
+        [disabled]="currentStep === 0 || loadingForms"
         (click)="previousStep()"
       >
         ← Previous
@@ -56,6 +82,7 @@
       <button
         *ngIf="!isLastStep"
         class="btn-primary"
+        [disabled]="loadingForms"
         (click)="nextStep()"
       >
         Next →
@@ -63,6 +90,7 @@
       <button
         *ngIf="isLastStep"
         class="btn-success"
+        [disabled]="loadingForms"
         (click)="submitForm()"
       >
         ✓ Submit
