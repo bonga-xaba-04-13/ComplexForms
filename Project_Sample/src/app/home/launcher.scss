@@ -69,6 +69,13 @@
   }
 }
 
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
 .btn-open-form {
   padding: 12px 24px;
   background: #1a3a5c;
@@ -80,6 +87,7 @@
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s;
+  width: 100%;
 
   &:hover {
     background: #15304d;
@@ -87,5 +95,17 @@
 
   &:active {
     background: #0f2640;
+  }
+
+  &.btn-primary {
+    background: #059669;
+
+    &:hover {
+      background: #047857;
+    }
+
+    &:active {
+      background: #036b5d;
+    }
   }
 }

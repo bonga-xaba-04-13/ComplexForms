@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { PatientCaptureV2 } from '../components/patient-capture-v2/patient-capture-v2';
+import { PatientRegistrationComponent } from '../components/patient-registration/patient-registration.component';
 import { Router } from '@angular/router';
 import { MockAuthService } from '../auth/mock-auth.service';
 
@@ -29,6 +30,18 @@ export class Launcher {
       maxWidth: '1100px',
       height: '92vh',
       data: { title: 'Patient Capture' }
+    });
+  }
+
+  openPatientRegistration(): void {
+    this.dialog.open(PatientRegistrationComponent, {
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'full-screen-dialog',
+      width: '95vw',
+      maxWidth: '1100px',
+      height: '92vh',
+      data: { title: 'Patient Registration' }
     });
   }
 

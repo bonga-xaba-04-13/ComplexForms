@@ -7,11 +7,16 @@
   <div class="launcher-content">
     <div class="welcome-card">
       <h2>Welcome</h2>
-      <p>Click the button below to open the Patient Intake Registration form.</p>
+      <p>Click a button below to open a form.</p>
 
-      <button (click)="openPatientCapture()" class="btn-open-form">
-        📋 Open Patient Capture Form
-      </button>
+      <div class="button-group">
+        <button (click)="openPatientCapture()" class="btn-open-form">
+          📋 Patient Capture (v2 - mock-dev1)
+        </button>
+        <button (click)="openPatientRegistration()" class="btn-open-form btn-primary">
+          🆕 Patient Registration (mock-dev2)
+        </button>
+      </div>
     </div>
   </div>
 </div>
