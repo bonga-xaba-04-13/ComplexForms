@@ -4,9 +4,9 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, FormControl, Validators } 
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatStepperModule } from '@angular/material/stepper';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatDividerModule } from '@angular/material/divider';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { FormService } from '../../services/form.service';
 import { FormControlRendererComponent } from '../form-control-renderer/form-control-renderer.component';
 
@@ -28,9 +28,7 @@ interface LoadedStep {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatStepperModule,
     MatProgressBarModule,
-    MatDividerModule,
     FormControlRendererComponent,
   ],
   templateUrl: './stepper-form-modal.component.html',
@@ -72,28 +70,31 @@ export class StepperFormModalComponent implements OnInit {
 
   loadSubForms(stepDefinitions: any[]): void {
     const subFormRequests = stepDefinitions.map((step) =>
-      this.formService.getFormDefinition(step.form_keyname)
-    );
-
-    Promise.all(
-      subFormRequests.map((req) =>
-        req.toPromise().catch((err) => {
+      this.formService.getFormDefinition(step.form_keyname).pipe(
+        catchError((err) => {
           console.error('Error loading subform:', err);
-          return null;
+          return of(null);
         })
       )
-    ).then((results) => {
-      results.forEach((formData, index) => {
-        if (formData) {
-          const loadedStep = this.createLoadedStep(formData, stepDefinitions[index]);
-          this.loadedSteps.push(loadedStep);
-        }
-      });
-      this.isLoading = false;
+    );
+
+    forkJoin(subFormRequests).subscribe({
+      next: (results) => {
+        results.forEach((formData) => {
+          if (formData) {
+            const loadedStep = this.createLoadedStep(formData);
+            this.loadedSteps.push(loadedStep);
+          }
+        });
+        this.isLoading = false;
+      },
+      error: () => {
+        this.isLoading = false;
+      },
     });
   }
 
-  createLoadedStep(formData: any, stepDefinition: any): LoadedStep {
+  createLoadedStep(formData: any): LoadedStep {
     const formGroup = this.createFormGroup(formData.definition);
     return {
       formLabel: formData.formLabel,
