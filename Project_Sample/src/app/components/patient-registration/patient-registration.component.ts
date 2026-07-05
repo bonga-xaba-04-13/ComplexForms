@@ -83,7 +83,7 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
       .loadStepper()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (stepper) => {
+        next: (stepper: any) => {
           this.onStepperLoaded(stepper);
           this.stepperLoading = false;
           this.stepperError = false;
@@ -131,7 +131,7 @@ export class PatientRegistrationComponent implements OnInit, OnDestroy {
       .loadFormForStep(keyname)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (loaded) => {
+        next: (loaded: any) => {
           this.loadedSteps[index] = loaded;
           this.stepStates[index] = { status: 'loaded' };
           this.applyJointCapability(loaded);
