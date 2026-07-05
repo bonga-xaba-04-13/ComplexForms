@@ -59,7 +59,7 @@
         <p class="step-description">{{ currentStep.formDescription }}</p>
 
         <app-form-control-renderer
-          [formGroup]="currentStep.formGroup"
+          [formGroup]="getActiveFormGroup(currentStep)"
           [controls]="currentStep.controls"
         ></app-form-control-renderer>
       </div>
@@ -94,6 +94,7 @@
       color="accent"
       (click)="submitForm()"
       *ngIf="isLastStep()"
+      [disabled]="!isFormValid()"
       class="nav-button"
     >
       Submit

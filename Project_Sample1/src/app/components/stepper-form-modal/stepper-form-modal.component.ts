@@ -9,13 +9,15 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { FormService } from '../../services/form.service';
 import { FormControlRendererComponent } from '../form-control-renderer/form-control-renderer.component';
+import { CaptureMode, Participant, resolveParticipants } from '../../models/capture-mode.model';
+import { buildSubmitPayload } from '../../services/payload-builder';
 
 interface LoadedStep {
   formLabel: string;
   formDescription: string;
-  allowDynamicParticipants: boolean;
+  isDynamic: boolean;
   controls: any[];
-  formGroup: FormGroup;
+  participantForms: FormGroup[];
   formKeyName: string;
 }
 
@@ -37,17 +39,23 @@ interface LoadedStep {
 export class StepperFormModalComponent implements OnInit {
   loadedSteps: LoadedStep[] = [];
   currentStepIndex = 0;
+  activeParticipantIndex = 0;
   isLoading = true;
   stepperFormKey = 'patient_intake_stepper';
   stepperFormLabel = '';
   stepperFormDescription = '';
+  captureMode: CaptureMode = 'single';
+  participants: Participant[] = [];
 
   constructor(
     public dialogRef: MatDialogRef<StepperFormModalComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any,
     private formService: FormService,
     private fb: FormBuilder
-  ) {}
+  ) {
+    this.captureMode = data?.captureMode || 'single';
+    this.participants = resolveParticipants(this.captureMode);
+  }
 
   ngOnInit(): void {
     this.loadStepperForm();
@@ -95,13 +103,20 @@ export class StepperFormModalComponent implements OnInit {
   }
 
   createLoadedStep(formData: any): LoadedStep {
-    const formGroup = this.createFormGroup(formData.definition);
+    const isDynamic = formData.allowDynamicParticipants || false;
+    const instanceCount = isDynamic && this.captureMode === 'joint' ? this.participants.length : 1;
+
+    const participantForms: FormGroup[] = [];
+    for (let i = 0; i < instanceCount; i++) {
+      participantForms.push(this.createFormGroup(formData.definition));
+    }
+
     return {
       formLabel: formData.formLabel,
       formDescription: formData.formDescription,
-      allowDynamicParticipants: formData.allowDynamicParticipants,
+      isDynamic,
       controls: formData.definition || [],
-      formGroup,
+      participantForms,
       formKeyName: formData.formKeyname,
     };
   }
@@ -131,11 +146,12 @@ export class StepperFormModalComponent implements OnInit {
   }
 
   submitForm(): void {
-    const formData = this.loadedSteps.map((step) => ({
-      formKeyName: step.formKeyName,
-      data: step.formGroup.value,
-    }));
-    this.dialogRef.close(formData);
+    const payload = buildSubmitPayload(
+      this.loadedSteps,
+      this.captureMode,
+      this.participants
+    );
+    this.dialogRef.close(payload);
   }
 
   closeDialog(): void {
@@ -157,5 +173,26 @@ export class StepperFormModalComponent implements OnInit {
 
   isLastStep(): boolean {
     return this.currentStepIndex === this.loadedSteps.length - 1;
+  }
+
+  getActiveFormGroup(step: LoadedStep): FormGroup {
+    const index = this.shouldShowParticipantSwitcher(step) ? this.activeParticipantIndex : 0;
+    return step.participantForms[Math.min(index, step.participantForms.length - 1)];
+  }
+
+  shouldShowParticipantSwitcher(step: LoadedStep): boolean {
+    return step.isDynamic && this.captureMode === 'joint';
+  }
+
+  setActiveParticipant(index: number): void {
+    if (index >= 0 && index < this.participants.length) {
+      this.activeParticipantIndex = index;
+    }
+  }
+
+  isFormValid(): boolean {
+    return this.loadedSteps.every((step) =>
+      step.participantForms.every((form) => form.valid)
+    );
   }
 }
