@@ -1,0 +1,102 @@
+<div class="stepper-modal-container">
+  <!-- Header -->
+  <div class="modal-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h2 class="header-title">{{ stepperFormLabel }}</h2>
+        <p class="header-description">{{ stepperFormDescription }}</p>
+      </div>
+      <button mat-icon-button (click)="closeDialog()" class="close-button">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-container">
+    <mat-progress-bar
+      mode="determinate"
+      [value]="getProgressPercentage()"
+    ></mat-progress-bar>
+    <div class="progress-text">
+      Step {{ currentStepIndex + 1 }} of {{ loadedSteps.length }}
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="modal-content">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h3>Steps</h3>
+      </div>
+      <nav class="steps-list">
+        <button
+          *ngFor="let step of loadedSteps; let i = index"
+          [class.active]="currentStepIndex === i"
+          [class.completed]="i < currentStepIndex"
+          class="step-item"
+          (click)="currentStepIndex = i"
+          type="button"
+        >
+          <span class="step-number">{{ i + 1 }}</span>
+          <div class="step-info">
+            <div class="step-label">{{ step.formLabel }}</div>
+            <div class="step-description">{{ step.formDescription }}</div>
+          </div>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Form Content -->
+    <main class="form-content">
+      <div *ngIf="isLoading" class="loading-message">
+        Loading form...
+      </div>
+
+      <div *ngIf="!isLoading && getCurrentStep() as currentStep" class="step-form">
+        <h3 class="step-title">{{ currentStep.formLabel }}</h3>
+        <p class="step-description">{{ currentStep.formDescription }}</p>
+
+        <app-form-control-renderer
+          [formGroup]="currentStep.formGroup"
+          [controls]="currentStep.controls"
+        ></app-form-control-renderer>
+      </div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <div class="modal-footer">
+    <button
+      mat-stroked-button
+      (click)="goToPreviousStep()"
+      [disabled]="isFirstStep()"
+      class="nav-button"
+    >
+      Previous
+    </button>
+
+    <div class="footer-spacer"></div>
+
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="goToNextStep()"
+      *ngIf="!isLastStep()"
+      class="nav-button"
+    >
+      Next
+    </button>
+
+    <button
+      mat-raised-button
+      color="accent"
+      (click)="submitForm()"
+      *ngIf="isLastStep()"
+      class="nav-button"
+    >
+      Submit
+    </button>
+  </div>
+</div>

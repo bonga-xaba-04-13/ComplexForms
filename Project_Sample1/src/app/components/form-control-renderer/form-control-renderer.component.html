@@ -1,0 +1,101 @@
+<form [formGroup]="formGroup" class="form-controls">
+  <div *ngFor="let control of controls" class="form-control-wrapper">
+    <!-- Text Input -->
+    <mat-form-field *ngIf="control.type === 'text'" class="full-width">
+      <mat-label>{{ control.label }}</mat-label>
+      <input
+        matInput
+        [formControlName]="control.name"
+        [placeholder]="control.description"
+        [required]="isRequired(control)"
+      />
+      <mat-error *ngIf="formGroup.get(control.name)?.invalid">
+        {{ getErrorMessage(control) }}
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Email Input -->
+    <mat-form-field *ngIf="control.type === 'email'" class="full-width">
+      <mat-label>{{ control.label }}</mat-label>
+      <input
+        matInput
+        type="email"
+        [formControlName]="control.name"
+        [placeholder]="control.description"
+        [required]="isRequired(control)"
+      />
+      <mat-error *ngIf="formGroup.get(control.name)?.invalid">
+        {{ getErrorMessage(control) }}
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Telephone Input -->
+    <mat-form-field *ngIf="control.type === 'tel'" class="full-width">
+      <mat-label>{{ control.label }}</mat-label>
+      <input
+        matInput
+        type="tel"
+        [formControlName]="control.name"
+        [placeholder]="control.description"
+        [required]="isRequired(control)"
+      />
+      <mat-error *ngIf="formGroup.get(control.name)?.invalid">
+        {{ getErrorMessage(control) }}
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Select Dropdown -->
+    <mat-form-field *ngIf="control.type === 'select'" class="full-width">
+      <mat-label>{{ control.label }}</mat-label>
+      <mat-select [formControlName]="control.name" [required]="isRequired(control)">
+        <mat-option
+          *ngFor="let option of control.options"
+          [value]="option.value"
+        >
+          {{ option.label }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="formGroup.get(control.name)?.invalid">
+        {{ getErrorMessage(control) }}
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Checkbox -->
+    <div *ngIf="control.type === 'checkbox'" class="checkbox-wrapper">
+      <mat-checkbox [formControlName]="control.name">
+        {{ control.label }}
+      </mat-checkbox>
+    </div>
+
+    <!-- Date Input -->
+    <mat-form-field *ngIf="control.type === 'date'" class="full-width">
+      <mat-label>{{ control.label }}</mat-label>
+      <input
+        matInput
+        [matDatepicker]="picker"
+        [formControlName]="control.name"
+        [required]="isRequired(control)"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+      <mat-error *ngIf="formGroup.get(control.name)?.invalid">
+        {{ getErrorMessage(control) }}
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Textarea -->
+    <mat-form-field *ngIf="control.type === 'textarea'" class="full-width">
+      <mat-label>{{ control.label }}</mat-label>
+      <textarea
+        matInput
+        [formControlName]="control.name"
+        [placeholder]="control.description"
+        rows="4"
+        [required]="isRequired(control)"
+      ></textarea>
+      <mat-error *ngIf="formGroup.get(control.name)?.invalid">
+        {{ getErrorMessage(control) }}
+      </mat-error>
+    </mat-form-field>
+  </div>
+</form>

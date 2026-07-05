@@ -1,0 +1,23 @@
+.form-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.form-control-wrapper {
+  display: flex;
+  width: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.checkbox-wrapper {
+  padding: 8px 0;
+}
+
+mat-form-field {
+  width: 100%;
+}
