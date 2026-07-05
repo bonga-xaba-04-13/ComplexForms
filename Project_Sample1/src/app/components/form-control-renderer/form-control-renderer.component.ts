@@ -27,6 +27,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 export class FormControlRendererComponent {
   @Input() formGroup!: FormGroup;
   @Input() controls: any[] = [];
+  @Input() controlRows: any[][] = [];
 
   getErrorMessage(control: any): string {
     const formControl = this.formGroup.get(control.name);
@@ -38,5 +39,14 @@ export class FormControlRendererComponent {
 
   isRequired(control: any): boolean {
     return control.validators?.required === true;
+  }
+
+  isFullWidthRow(row: any[]): boolean {
+    return row.length === 1 && this.isFullWidthControl(row[0]);
+  }
+
+  isFullWidthControl(control: any): boolean {
+    const fullWidthTypes = ['textarea', 'checkbox', 'radio'];
+    return fullWidthTypes.includes(control.type);
   }
 }

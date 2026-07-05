@@ -17,6 +17,7 @@ interface LoadedStep {
   formDescription: string;
   isDynamic: boolean;
   controls: any[];
+  controlRows: any[][];
   participantForms: FormGroup[];
   formKeyName: string;
 }
@@ -112,11 +113,15 @@ export class StepperFormModalComponent implements OnInit {
       participantForms.push(this.createFormGroup(formData.definition));
     }
 
+    const controls = formData.definition || [];
+    const controlRows = this.getControlRows(controls);
+
     return {
       formLabel: formData.formLabel,
       formDescription: formData.formDescription,
       isDynamic,
-      controls: formData.definition || [],
+      controls,
+      controlRows,
       participantForms,
       formKeyName: formData.formKeyname,
     };
@@ -132,6 +137,40 @@ export class StepperFormModalComponent implements OnInit {
       formGroupConfig[control.name] = new FormControl('', validators);
     });
     return this.fb.group(formGroupConfig);
+  }
+
+  getControlRows(controls: any[]): any[][] {
+    if (!controls || controls.length === 0) return [];
+
+    const rows: any[][] = [];
+    let currentRow: any[] = [];
+
+    controls.forEach((control) => {
+      if (this.isFullWidthControl(control)) {
+        if (currentRow.length > 0) {
+          rows.push([...currentRow]);
+          currentRow = [];
+        }
+        rows.push([control]);
+      } else {
+        currentRow.push(control);
+        if (currentRow.length === 2) {
+          rows.push([...currentRow]);
+          currentRow = [];
+        }
+      }
+    });
+
+    if (currentRow.length > 0) {
+      rows.push([...currentRow]);
+    }
+
+    return rows;
+  }
+
+  isFullWidthControl(control: any): boolean {
+    const fullWidthTypes = ['textarea', 'checkbox', 'radio'];
+    return fullWidthTypes.includes(control.type);
   }
 
   goToNextStep(): void {

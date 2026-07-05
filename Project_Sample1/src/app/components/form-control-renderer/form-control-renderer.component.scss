@@ -1,12 +1,23 @@
 .form-controls {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   padding: 16px;
 }
 
-.form-control-wrapper {
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  &.full {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group {
   display: flex;
+  flex-direction: column;
   width: 100%;
 }
 
@@ -16,8 +27,26 @@
 
 .checkbox-wrapper {
   padding: 8px 0;
+  display: flex;
+  align-items: center;
 }
 
 mat-form-field {
   width: 100%;
+}
+
+/* Responsive: Single column on mobile */
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+
+    &.full {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-controls {
+    gap: 16px;
+    padding: 12px;
+  }
 }
