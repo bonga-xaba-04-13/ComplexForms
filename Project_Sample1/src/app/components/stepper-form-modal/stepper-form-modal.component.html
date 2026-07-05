@@ -55,8 +55,46 @@
       </div>
 
       <div *ngIf="!isLoading && getCurrentStep() as currentStep" class="step-form">
-        <h3 class="step-title">{{ currentStep.formLabel }}</h3>
-        <p class="step-description">{{ currentStep.formDescription }}</p>
+        <div class="step-header">
+          <div class="step-header-title">
+            <h3 class="step-title">{{ currentStep.formLabel }}</h3>
+            <p class="step-description">{{ currentStep.formDescription }}</p>
+          </div>
+
+          <!-- Participant Switcher (shown only on dynamic steps in joint mode) -->
+          <div
+            *ngIf="shouldShowParticipantSwitcher(currentStep)"
+            class="participant-switcher"
+          >
+            <div class="participant-buttons">
+              <button
+                *ngFor="let participant of participants; let i = index"
+                [class.active]="activeParticipantIndex === i"
+                [class.valid]="currentStep.participantForms[i].valid"
+                [class.invalid]="!currentStep.participantForms[i].valid"
+                (click)="setActiveParticipant(i)"
+                type="button"
+                class="participant-button"
+              >
+                <span class="button-label">{{ participant.label }}</span>
+                <span
+                  *ngIf="!currentStep.participantForms[i].valid"
+                  class="validity-indicator invalid"
+                  title="Form incomplete"
+                >
+                  ✕
+                </span>
+                <span
+                  *ngIf="currentStep.participantForms[i].valid"
+                  class="validity-indicator valid"
+                  title="Form complete"
+                >
+                  ✓
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
 
         <app-form-control-renderer
           [formGroup]="getActiveFormGroup(currentStep)"
@@ -94,10 +132,11 @@
       color="accent"
       (click)="submitForm()"
       *ngIf="isLastStep()"
-      [disabled]="!isFormValid()"
-      class="nav-button"
+      [disabled]="!isFormValid() || isSubmitting"
+      class="nav-button submit-button"
     >
-      Submit
+      <mat-icon *ngIf="isSubmitting" class="spinner">hourglass_bottom</mat-icon>
+      {{ isSubmitting ? 'Submitting...' : 'Submit' }}
     </button>
   </div>
 </div>

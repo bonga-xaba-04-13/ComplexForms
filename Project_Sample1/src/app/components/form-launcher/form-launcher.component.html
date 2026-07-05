@@ -1,11 +1,25 @@
 <div class="launcher-container">
-  <button
-    mat-raised-button
-    color="primary"
-    (click)="openPatientIntakeForm()"
-    class="launch-button"
-  >
-    <mat-icon>description</mat-icon>
-    Open Patient Intake Form
-  </button>
+  <div class="button-group">
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="openPatientIntakeForm('single')"
+      class="launch-button"
+      matTooltip="Capture data for a single participant"
+    >
+      <mat-icon>person</mat-icon>
+      Single Participant
+    </button>
+
+    <button
+      mat-raised-button
+      color="accent"
+      (click)="openPatientIntakeForm('joint')"
+      class="launch-button"
+      matTooltip="Capture data for two participants simultaneously"
+    >
+      <mat-icon>people</mat-icon>
+      Joint Capture
+    </button>
+  </div>
 </div>

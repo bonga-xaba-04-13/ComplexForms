@@ -188,6 +188,20 @@ mat-progress-bar {
   max-width: 600px;
 }
 
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.step-header-title {
+  flex: 1;
+  min-width: 250px;
+}
+
 .step-title {
   margin: 0 0 8px 0;
   font-size: 18px;
@@ -200,6 +214,89 @@ mat-progress-bar {
   font-size: 13px;
   color: #666;
   line-height: 1.5;
+}
+
+/* Participant Switcher */
+.participant-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+  min-width: 180px;
+}
+
+.participant-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participant-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid #d0d0d0;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+
+  &:hover {
+    background: #f5f5f5;
+    border-color: #1a3a5c;
+  }
+
+  &.active {
+    background: #1a3a5c;
+    color: white;
+    border-color: #1a3a5c;
+    box-shadow: 0 2px 6px rgba(26, 58, 92, 0.2);
+  }
+
+  &.valid:not(.active) {
+    border-color: #4caf50;
+    background: #f1f8f5;
+  }
+
+  &.invalid:not(.active) {
+    border-color: #f44336;
+    background: #fdf5f4;
+  }
+}
+
+.button-label {
+  flex: 1;
+  text-align: left;
+}
+
+.validity-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+
+  &.valid {
+    background: #4caf50;
+    color: white;
+  }
+
+  &.invalid {
+    background: #f44336;
+    color: white;
+  }
 }
 
 /* Footer */
@@ -219,6 +316,25 @@ mat-progress-bar {
 
 .nav-button {
   min-width: 100px;
+
+  &.submit-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
 
 /* Responsive */
@@ -253,6 +369,26 @@ mat-progress-bar {
 
   .header-description {
     font-size: 12px;
+  }
+
+  .step-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .participant-switcher {
+    min-width: auto;
+  }
+
+  .participant-buttons {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .participant-button {
+    flex: 1;
+    justify-content: center;
   }
 }
 

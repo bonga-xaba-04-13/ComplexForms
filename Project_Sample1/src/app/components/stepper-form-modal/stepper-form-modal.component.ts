@@ -41,6 +41,7 @@ export class StepperFormModalComponent implements OnInit {
   currentStepIndex = 0;
   activeParticipantIndex = 0;
   isLoading = true;
+  isSubmitting = false;
   stepperFormKey = 'patient_intake_stepper';
   stepperFormLabel = '';
   stepperFormDescription = '';
@@ -146,12 +147,21 @@ export class StepperFormModalComponent implements OnInit {
   }
 
   submitForm(): void {
+    if (!this.isFormValid() || this.isSubmitting) {
+      return;
+    }
+
+    this.isSubmitting = true;
     const payload = buildSubmitPayload(
       this.loadedSteps,
       this.captureMode,
       this.participants
     );
-    this.dialogRef.close(payload);
+
+    // Simulate processing delay for better UX feedback
+    setTimeout(() => {
+      this.dialogRef.close(payload);
+    }, 300);
   }
 
   closeDialog(): void {
