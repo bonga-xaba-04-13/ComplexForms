@@ -2,17 +2,17 @@
   <div [formGroup]="formGroup">
 
     <div class="auto__panel-title">
-      {{ isPartner ? 'Spouse / Partner — ' : '' }}{{ stepLabel }}
+      {{ participantIndex > 0 ? 'Participant ' + (participantIndex + 1) + ' — ' : '' }}{{ stepLabel }}
     </div>
 
     @if (stepDescription) {
       <div class="auto__panel-desc">{{ stepDescription }}</div>
     }
 
-    @if (isPartner) {
+    @if (participantIndex > 0) {
       <div class="auto__info-banner">
         <span>&#8505;</span>
-        All sections apply equally to the spouse or partner. Enter their individual details here.
+        This participant's details. Fill in all fields for this person.
       </div>
     }
 

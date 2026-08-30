@@ -1,26 +1,43 @@
-import {
-  Component, Inject, OnInit, HostListener, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef
-} from '@angular/core';
+import { Component, OnInit, HostListener, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { JsonFormControl } from '../../models/form-fields';
 import { DynamicForm } from './dynamic-form/dynamic-form';
 import { FormService } from '../../services/form.service';
 import { FormGroupRegistry } from './form-groups/form-group-registry';
 import { PersonalInfoForm } from './form-groups/personal-info-form/personal-info-form';
 import { ContactInfoForm } from './form-groups/contact-info-form/contact-info-form';
-import { MedicalHistoryForm } from './form-groups/medical-history-form/medical-history-form';
-import { MedicationsForm } from './form-groups/medications-form/medications-form';
-import { LifestyleForm } from './form-groups/lifestyle-form/lifestyle-form';
 import { InsuranceForm } from './form-groups/insurance-form/insurance-form';
 import { EmergencyContactsForm } from './form-groups/emergency-contacts-form/emergency-contacts-form';
 import { PayloadBuilder } from './payload/payload-builder.service';
-import { StepSnapshot, StepGroupedPayload, ParticipantPayload, DraftMetadata } from './payload/payload.types';
+import { StepSnapshot, ParticipantPayload } from './payload/payload.types';
 import { DraftService } from './services/draft.service';
-import { ValidationService, ValidationError } from './services/validation.service';
+import { ValidationService } from './services/validation.service';
+import { SubmissionService } from './services/submission.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { Store } from '@ngrx/store';
+import {
+  initializePatientCapture,
+  markStepCompleted,
+  restorePatientCaptureState,
+  setActiveParticipant,
+  setCaptureMode,
+  setCurrentStep,
+  updateCapturedStepData,
+} from '../../store/patient-capture/patient-capture.actions';
+import {
+  AppState,
+  PatientCaptureState,
+} from '../../store/patient-capture/patient-capture.reducer';
+import { selectPatientCaptureState } from '../../store/patient-capture/patient-capture.selectors';
+
+/** Keys of form steps that should never be rendered (removed during minimization). */
+const EXCLUDED_FORM_KEYNAMES = new Set([
+  'lifestyle_social',
+  'medical_history',
+  'current_medications',
+]);
 
 @Component({
   standalone: true,
@@ -30,26 +47,23 @@ import { takeUntil } from 'rxjs/operators';
     DynamicForm,
     PersonalInfoForm,
     ContactInfoForm,
-    MedicalHistoryForm,
-    MedicationsForm,
-    LifestyleForm,
     InsuranceForm,
-    EmergencyContactsForm
+    EmergencyContactsForm,
   ],
   templateUrl: './patient-capture-v2.html',
   styleUrl: './patient-capture-v2.scss',
 })
 export class PatientCaptureV2 implements OnInit, OnDestroy {
-  LoadedSteps: any[][] = [];
+  LoadedSteps: any[] = [];
   TOTAL = 0;
 
   currentStep = 0;
-  activeTab: 'patient' | 'partner' = 'patient';
-  showPartnerTab = false;
+  activeParticipant = 0;
+  captureMode: 'individual' | 'joint' = 'individual';
   completedSteps = new Set<number>();
 
-  patientForms: FormGroup[] = [];
-  partnerForms: FormGroup[] = [];
+  /** Form groups per participant index. Index 0 always exists. */
+  participantForms: Record<number, FormGroup[]> = { 0: [] };
 
   toastMsg = '';
   toastVisible = false;
@@ -66,66 +80,88 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     private payloadBuilder: PayloadBuilder,
     private draftService: DraftService,
     private validationService: ValidationService,
+    private submissionService: SubmissionService,
     private dialogRef: MatDialogRef<PatientCaptureV2>,
     @Inject(MAT_DIALOG_DATA) public data: { title?: string },
-    private cdr: ChangeDetectorRef
-  ) {}
+    private cdr: ChangeDetectorRef,
+    private store: Store<AppState>
+  ) {
+    this.store.select(selectPatientCaptureState)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state: PatientCaptureState) => this.syncUiStateFromStore(state));
+  }
 
   ngOnInit(): void {
     this.loadFormsFromApi();
   }
 
-  /**
-   * Called after forms are loaded from API.
-   * Restores any saved draft if available.
-   */
+  // ── UI State Sync from Store ────────────────────────────────────────────
+
+  private syncUiStateFromStore(state: PatientCaptureState): void {
+    this.currentStep = state.currentStep;
+    this.activeParticipant = state.activeParticipant;
+    this.captureMode = state.captureMode;
+    this.completedSteps = new Set(state.completedSteps);
+    if (state.totalSteps > 0) {
+      this.TOTAL = state.totalSteps;
+    }
+  }
+
+  /** Restore saved draft if available. */
   private restoreDraftIfAvailable(): void {
     const restored = this.draftService.restoreDraft();
     if (restored) {
+      // Determine capture mode from restored data
+      const hasMultipleParticipants = restored.snapshots.some(s => s.allowDynamicParticipants);
+      this.captureMode = hasMultipleParticipants ? 'joint' : 'individual';
+
+      // If joint, build participant-1 forms before applying data
+      if (this.captureMode === 'joint') {
+        this.buildParticipantFormsForIndex(1);
+      }
+
       this.applyRestoredData(restored);
     }
   }
 
-  /**
-   * Apply restored draft data to forms and UI state.
-   */
   private applyRestoredData(restored: any): void {
-    restored.snapshots.forEach((snapshot: StepSnapshot, index: number) => {
-      if (this.patientForms[index]) {
-        this.patientForms[index].patchValue(snapshot.patient);
-      }
-      if (snapshot.allowDynamicParticipants && this.partnerForms[index]) {
-        this.partnerForms[index].patchValue(snapshot.partner);
-      }
+    restored.snapshots.forEach((snapshot: StepSnapshot) => {
+      const idx = this.LoadedSteps.findIndex(s => s.keyname === snapshot.stepName || s.formLabel === snapshot.stepLabel);
+      if (idx === -1) return;
+      const stepIdx = Math.max(0, idx);
+
+      Object.entries(snapshot.participants).forEach(([pIdx, values]) => {
+        const numericIdx = Number(pIdx);
+        const forms = this.participantForms[numericIdx]?.[stepIdx];
+        if (forms) {
+          forms.patchValue(values as Record<string, unknown>);
+        }
+      });
     });
 
-    this.currentStep = Math.min(restored.currentStep, this.TOTAL - 1);
-    this.completedSteps = new Set(restored.completedSteps || []);
+    const restoredStep = Math.min(restored.currentStep, this.TOTAL - 1);
+    this.currentStep = restoredStep;
+    this.completedSteps = new Set(restored.completedSteps ?? []);
+    this.store.dispatch(restorePatientCaptureState({
+      currentStep: restoredStep,
+      activeParticipant: this.activeParticipant,
+      captureMode: this.captureMode,
+      completedSteps: Array.from(this.completedSteps),
+      capturedData: this.toCapturedDataMap(),
+    }));
     this.showToast('Draft restored', 2500);
   }
 
-  /**
-   * Build draft metadata from current form state.
-   */
-  private buildDraftMetadata(): DraftMetadata {
-    return {
-      currentStep: this.currentStep,
-      completedSteps: Array.from(this.completedSteps),
-      totalSteps: this.TOTAL
-    };
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
+  // ── Load Forms ──────────────────────────────────────────────────────────
 
   private loadFormsFromApi(): void {
     this.formService.loadStepperWithSubForms()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          this.initializeLoadedSteps(data.forms);
+          // Filter out excluded form keynames
+          const rawForms = data.forms.filter((f: any) => !EXCLUDED_FORM_KEYNAMES.has(f.keyname));
+          this.initializeLoadedSteps(rawForms);
           this.restoreDraftIfAvailable();
         },
         error: (err) => {
@@ -137,31 +173,35 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
 
   private initializeLoadedSteps(forms: any[]): void {
     this.LoadedSteps = [];
-    this.patientForms = [];
-    this.partnerForms = [];
+    this.participantForms = {};
 
+    // Always build participant 0 forms
+    this.participantForms[0] = [];
     forms.forEach((form: any) => {
-      // Log form type detection for Phase 1 identification
       FormGroupRegistry.logFormTypeDetection(form, form.definition);
-
       const patientForm = this.buildGroup(form.definition);
-      this.patientForms.push(patientForm);
-
-      const stepArray: any[] = [form];
-
-      if (form.allowDynamicParticipants) {
-        const partnerForm = this.buildGroup(form.definition);
-        this.partnerForms.push(partnerForm);
-        stepArray.push(form);
-      } else {
-        this.partnerForms.push(this.fb.group({}));
-      }
-
-      this.LoadedSteps.push(stepArray);
+      this.participantForms[0].push(patientForm);
+      this.LoadedSteps.push(form);
     });
 
     this.TOTAL = this.LoadedSteps.length;
+
+    this.store.dispatch(initializePatientCapture({
+      totalSteps: this.TOTAL,
+      currentStep: this.currentStep,
+      activeParticipant: this.activeParticipant,
+      captureMode: this.captureMode,
+      completedSteps: Array.from(this.completedSteps),
+      capturedData: this.toCapturedDataMap(),
+    }));
     this.cdr.markForCheck();
+  }
+
+  /** Build form groups for a given participant index (used when switching to joint mode). */
+  private buildParticipantFormsForIndex(participantIndex: number): void {
+    this.participantForms[participantIndex] = this.LoadedSteps.map(step =>
+      this.buildGroup(step.definition)
+    );
   }
 
   private buildGroup(controls: any[]): FormGroup {
@@ -175,31 +215,34 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     return this.fb.group(group);
   }
 
-  // ── Computed accessors ──────────────────────────────────────────────────────
+  // ── Computed Accessors ──────────────────────────────────────────────────
 
   get currentStepDef(): any {
-    return this.LoadedSteps[this.currentStep]?.[0];
-  }
-
-  get hasPartnerForCurrentStep(): boolean {
-    return this.LoadedSteps[this.currentStep]?.length === 2;
+    return this.LoadedSteps[this.currentStep];
   }
 
   get activeControls(): any[] {
-    const def = this.currentStepDef;
-    return def?.definition || [];
+    return this.currentStepDef?.definition || [];
   }
 
+  /** The FormGroup array for the currently active participant. */
+  get activeParticipantForms(): FormGroup[] {
+    return this.participantForms[this.activeParticipant] ?? [];
+  }
+
+  /** The FormGroup for the current step and active participant. */
   get activeFormGroup(): FormGroup {
-    return this.activeTab === 'partner'
-      ? this.partnerForms[this.currentStep]
-      : this.patientForms[this.currentStep];
+    return this.activeParticipantForms[this.currentStep] ?? this.fb.group({});
   }
 
-  getFormGroupType(formDef: any): string {
-    if (!formDef) return 'unknown';
-    const detection = FormGroupRegistry.identifyFormType(formDef.definition);
-    return detection.type;
+  /** Available participant indexes — [0] in individual mode, [0,1] in joint mode. */
+  get participantIndexes(): number[] {
+    return this.captureMode === 'joint' ? [0, 1] : [0];
+  }
+
+  /** Whether joint mode is enabled. */
+  get isJointMode(): boolean {
+    return this.captureMode === 'joint';
   }
 
   get progressPercent(): number {
@@ -209,91 +252,126 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
   get isFirstStep(): boolean { return this.currentStep === 0; }
   get isLastStep(): boolean  { return this.currentStep === this.TOTAL - 1; }
 
-  get partnerProgress(): string {
-    const filled = this.partnerForms.filter(f => f.dirty).length;
+  /** Progress badge for a participant tab. */
+  getParticipantProgress(participantIndex: number): string {
+    const forms = this.participantForms[participantIndex];
+    if (!forms) return 'Not started';
+    const filled = forms.filter(f => f.dirty).length;
     return filled === 0 ? 'Not started' : `${filled} / ${this.TOTAL} steps`;
   }
 
-  // ── Navigation ──────────────────────────────────────────────────────────────
+  /** Detect which child form component should render this step. */
+  getFormGroupType(formDef: any): string {
+    if (!formDef) return 'unknown';
+    const detection = FormGroupRegistry.identifyFormType(formDef.definition);
+    return detection.type;
+  }
+
+  // ── Capture Mode ────────────────────────────────────────────────────────
+
+  /** Toggle between individual and joint capture mode. */
+  setCaptureMode(mode: 'individual' | 'joint'): void {
+    this.captureMode = mode;
+    this.activeParticipant = 0;
+    this.store.dispatch(setCaptureMode({ captureMode: mode }));
+
+    if (mode === 'joint') {
+      // Build participant 1 forms on demand
+      if (!this.participantForms[1]) {
+        this.buildParticipantFormsForIndex(1);
+      }
+      this.showToast('Joint mode enabled — fill forms for each participant', 3500);
+    } else {
+      // Clear participant 1 forms when switching back to individual
+      delete this.participantForms[1];
+      this.showToast('Switched to individual capture', 2500);
+    }
+  }
+
+  // ── Participant Switching ───────────────────────────────────────────────
+
+  switchParticipant(index: number): void {
+    this.activeParticipant = index;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: index }));
+    this.scrollTop();
+  }
+
+  // ── Navigation ──────────────────────────────────────────────────────────
 
   goToStep(index: number): void {
     this.currentStep = index;
-    this.activeTab = 'patient';
+    this.activeParticipant = 0;
+    this.store.dispatch(setCurrentStep({ currentStep: index }));
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
     this.scrollTop();
   }
 
   next(): void {
     if (this.isLastStep) return;
     this.completedSteps = new Set([...this.completedSteps, this.currentStep]);
+    this.store.dispatch(markStepCompleted({ stepIndex: this.currentStep }));
     this.currentStep++;
-    this.activeTab = 'patient';
+    this.store.dispatch(setCurrentStep({ currentStep: this.currentStep }));
+    this.activeParticipant = 0;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
     this.scrollTop();
   }
 
-  /**
-   * Enhanced next step with validation feedback.
-   * Validates current step and warns if prior steps are incomplete.
-   */
   nextStepWithValidation(): void {
     if (this.isLastStep) return;
 
-    const formLabels = this.LoadedSteps.map((step: any) => step[0]?.formLabel || 'Unknown');
+    const formLabels = this.LoadedSteps.map(s => s.formLabel || 'Unknown');
 
-    // Validate current step first
-    const currentStepForm = this.activeTab === 'patient'
-      ? this.patientForms[this.currentStep]
-      : this.partnerForms[this.currentStep];
+    // Validate current step for active participant
+    const participantForms = this.participantForms[this.activeParticipant];
+    if (!participantForms?.[this.currentStep]) {
+      this.next();
+      return;
+    }
 
     const currentValidation = this.validationService.validateCurrentStep(
-      currentStepForm,
+      participantForms[this.currentStep],
       this.currentStep,
-      formLabels[this.currentStep],
-      this.activeTab
+      formLabels[this.currentStep] || 'Unknown',
+      this.activeParticipant
     );
 
-    // If current step invalid, show specific errors and block navigation
     if (!currentValidation.isValid) {
       this.showErrorModal(
         `Step ${this.currentStep + 1} has errors:\n\n${this.validationService.formatErrorsForDisplay(currentValidation.errors)}\n\nPlease fix these issues before proceeding.`
       );
-      currentStepForm.markAllAsTouched();
+      participantForms[this.currentStep].markAllAsTouched();
       return;
     }
 
-    // Check for incomplete prior steps
-    const priorStepsValidation = this.validationService.validateAllPatientForms(
-      this.patientForms,
+    // Allow user to continue despite prior step warnings
+    const priorStepsValidation = this.validationService.validateParticipantForms(
+      participantForms,
       formLabels,
+      this.activeParticipant,
       this.currentStep - 1
     );
 
     if (!priorStepsValidation.isValid) {
-      const priorErrors = priorStepsValidation.errors;
-      const firstInvalidStep = priorErrors[0]?.stepIndex ?? this.currentStep;
-
-      this.showToast(
-        `⚠️ Step ${firstInvalidStep + 1} has incomplete fields. Continue anyway?`,
-        5000
-      );
-      // Allow user to continue despite prior step issues
+      const firstInvalid = priorStepsValidation.firstInvalidStepIndex ?? this.currentStep;
+      this.showToast(`⚠️ Step ${firstInvalid + 1} has incomplete fields. Continue anyway?`, 5000);
     }
 
-    // Proceed to next step
     this.completedSteps = new Set([...this.completedSteps, this.currentStep]);
+    this.store.dispatch(markStepCompleted({ stepIndex: this.currentStep }));
     this.currentStep++;
-    this.activeTab = 'patient';
+    this.store.dispatch(setCurrentStep({ currentStep: this.currentStep }));
+    this.activeParticipant = 0;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
     this.scrollTop();
   }
 
   previous(): void {
     if (this.isFirstStep) return;
     this.currentStep--;
-    this.activeTab = 'patient';
-    this.scrollTop();
-  }
-
-  switchTab(tab: 'patient' | 'partner'): void {
-    this.activeTab = tab;
+    this.store.dispatch(setCurrentStep({ currentStep: this.currentStep }));
+    this.activeParticipant = 0;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
     this.scrollTop();
   }
 
@@ -301,36 +379,32 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     this.panelsScroll?.nativeElement?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ── Field Changes from Child Components ────────────────────────────────
+  // ── Field Changes ───────────────────────────────────────────────────────
 
-  onFieldChanged(event: { fieldName: string; value: any }): void {
-    // Handle marital status change from PersonalInfoForm
-    if (event.fieldName === 'maritalStatus') {
-      this.onMaritalChange(event.value);
-    }
+  onFieldChanged(_event: { fieldName: string; value: any }): void {
+    const stepIndex = this.currentStep;
+    const allParticipants: Record<number, Record<string, unknown>> = {};
+
+    this.participantIndexes.forEach(idx => {
+      allParticipants[idx] = this.participantForms[idx]?.[stepIndex]?.value ?? {};
+    });
+
+    this.store.dispatch(updateCapturedStepData({
+      stepIndex,
+      participants: allParticipants,
+      allowDynamicParticipants: this.isJointMode,
+      stepName: this.currentStepDef?.keyname || `step_${stepIndex}`,
+      stepLabel: this.currentStepDef?.formLabel || `Step ${stepIndex + 1}`,
+      isComplete: this.isCurrentStepComplete(stepIndex),
+    }));
   }
 
-  // ── Marital status ──────────────────────────────────────────────────────────
-
-  onMaritalChange(status: string): void {
-    if (status === 'married' && this.hasPartnerForCurrentStep) {
-      this.showPartnerTab = true;
-      this.showToast('Spouse / Partner tab enabled — switch tabs to capture their details', 3500);
-    } else {
-      this.showPartnerTab = false;
-      this.activeTab = 'patient';
-    }
-  }
-
-  // ── Actions ─────────────────────────────────────────────────────────────────
+  // ── Actions ─────────────────────────────────────────────────────────────
 
   saveDraft(): void {
     try {
       const snapshots = this.toStepSnapshots();
-      const captureMode = this.showPartnerTab ? 'married' : 'single';
-      const metadata = this.buildDraftMetadata();
-
-      this.draftService.saveDraft(snapshots, captureMode, metadata);
+      this.draftService.saveDraft(snapshots, this.captureMode, this.buildDraftMetadata());
       this.showToast('Draft saved successfully', 2500);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -339,16 +413,10 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Save simplified draft (only non-empty values, no metadata).
-   * Mirrors the backend payload structure.
-   */
   saveSimpleDraft(): void {
     try {
       const snapshots = this.toStepSnapshots();
-      const captureMode = this.showPartnerTab ? 'married' : 'single';
-
-      this.draftService.saveSimpleDraft(snapshots, captureMode);
+      this.draftService.saveSimpleDraft(snapshots, this.captureMode);
       this.showToast('Draft saved', 2000);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -357,122 +425,146 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Convert FormGroup arrays to StepSnapshot array for payload building.
-   * This is the adapter between PatientCaptureV2's internal state and PayloadBuilder.
-   */
+  /** Convert internal form state to StepSnapshot array for payload building. */
   private toStepSnapshots(): StepSnapshot[] {
-    return this.LoadedSteps.map((stepArray, index) => {
-      const formDef = stepArray[0];
-      return {
-        stepName: formDef.keyname || `step_${index}`,
-        stepLabel: formDef.formLabel,
-        allowDynamicParticipants: formDef.allowDynamicParticipants || false,
-        patient: this.patientForms[index]?.value || {},
-        partner: this.partnerForms[index]?.value || {}
-      };
-    });
+    return this.LoadedSteps.map((step, index) => ({
+      stepName: step.keyname || `step_${index}`,
+      stepLabel: step.formLabel,
+      allowDynamicParticipants: this.isJointMode,
+      participants: this.participantIndexes.reduce((acc, idx) => {
+        acc[idx] = this.participantForms[idx]?.[index]?.value || {};
+        return acc;
+      }, {} as Record<number, Record<string, unknown>>)
+    }));
   }
 
+  private toCapturedDataMap(): Record<number, {
+    participants: Record<number, Record<string, unknown>>;
+    allowDynamicParticipants: boolean;
+    stepName?: string;
+    stepLabel?: string;
+    isComplete?: boolean;
+  }> {
+    return this.LoadedSteps.reduce((acc, step, index) => {
+      const participants: Record<number, Record<string, unknown>> = {};
+      this.participantIndexes.forEach(idx => {
+        participants[idx] = this.participantForms[idx]?.[index]?.value ?? {};
+      });
+      acc[index] = {
+        participants,
+        allowDynamicParticipants: !!step.allowDynamicParticipants || this.isJointMode,
+        stepName: step.keyname || `step_${index}`,
+        stepLabel: step.formLabel || `Step ${index + 1}`,
+        isComplete: this.isCurrentStepComplete(index),
+      };
+      return acc;
+    }, {} as Record<number, { participants: Record<number, Record<string, unknown>>; allowDynamicParticipants: boolean; stepName?: string; stepLabel?: string; isComplete?: boolean; }>);
+  }
+
+  private isCurrentStepComplete(stepIndex: number): boolean {
+    let hasAnyData = false;
+    this.participantIndexes.forEach(idx => {
+      const values = this.participantForms[idx]?.[stepIndex]?.value ?? {};
+      if (Object.values(values).some(v => v !== null && v !== undefined && v !== '')) {
+        hasAnyData = true;
+      }
+    });
+    return hasAnyData;
+  }
+
+  private buildDraftMetadata() {
+    return {
+      currentStep: this.currentStep,
+      completedSteps: Array.from(this.completedSteps),
+      totalSteps: this.TOTAL,
+    };
+  }
+
+  /** Submit the entire form — validate, POST via HTTP, close dialog on success. */
   submitForm(): void {
-    const allValid = this.patientForms.every(f => f.valid);
+    // Validate participant 0 fully
+    const p0Forms = this.participantForms[0];
+    const allValid = p0Forms.every(f => f.valid);
     if (!allValid) {
-      this.patientForms.forEach(f => f.markAllAsTouched());
+      p0Forms.forEach(f => f.markAllAsTouched());
       this.showToast('Please complete all required fields');
       return;
     }
 
-    // Optional: Validate partner forms if married
-    if (this.showPartnerTab) {
-      const partnerValid = this.partnerForms.every(f => Object.keys(f.value).length === 0 || f.valid);
-      if (!partnerValid) {
-        this.partnerForms.forEach(f => f.markAllAsTouched());
-        this.showToast('Please complete all partner fields');
+    // In joint mode also validate participant 1 (skip empty stubs)
+    if (this.isJointMode && this.participantForms[1]) {
+      const p1Forms = this.participantForms[1];
+      const p1Invalid = p1Forms.some(f => {
+        if (Object.keys(f.value).every(k => !f.value[k])) return false; // skip empty stubs
+        return !f.valid;
+      });
+      if (p1Invalid) {
+        p1Forms.forEach(f => f.markAllAsTouched());
+        this.showToast('Please complete partner form fields');
         return;
       }
     }
 
-    // Convert FormGroup data to step snapshots
+    // Build payloads
     const snapshots = this.toStepSnapshots();
-
-    // Build both payload formats
-    const formatA: StepGroupedPayload = this.payloadBuilder.buildStepGroupedPayload(snapshots);
+    const formatA = this.payloadBuilder.buildStepGroupedPayload(snapshots);
     const formatB: ParticipantPayload = this.payloadBuilder.buildParticipantPayload(snapshots);
 
-    // Log both formats for debugging
-    console.log('PatientCaptureV2 - Format A (Backend):', formatA);
-    console.log('PatientCaptureV2 - Format B (Audit):', formatB);
+    console.log('Submitting patient intake...', { backend: formatA, audit: formatB });
 
-    // Close dialog with both payloads
-    const result = {
-      backend: formatA,
-      audit: formatB,
-      legacyFormat: {
-        patient: this.patientForms.map(f => f.value),
-        partner: this.showPartnerTab ? this.partnerForms.map(f => f.value) : null,
+    // Demo POST via SubmissionService (logs body to console automatically)
+    this.submissionService.submitIntake({ backend: formatA, audit: formatB }).subscribe({
+      next: () => {
+        this.showToast('Patient record submitted successfully!');
+        setTimeout(() => this.dialogRef.close({ backend: formatA, audit: formatB }), 1200);
+      },
+      error: (err) => {
+        // Even on network failure, the payload was logged by SubmissionService
+        console.warn('POST failed (endpoint may not exist locally):', err);
+        this.showToast('Submission failed — payload was logged to Console for inspection', 5000);
+        // Close anyway so user can see result in dev
+        setTimeout(() => this.dialogRef.close({ backend: formatA, audit: formatB }), 1500);
       }
-    };
-
-    this.showToast('Patient record submitted successfully!');
-    setTimeout(() => this.dialogRef.close(result), 1200);
+    });
   }
 
-  /**
-   * Enhanced submit with detailed validation feedback.
-   * Validates all forms and shows specific field-level errors.
-   */
+  /** Enhanced submit with detailed validation feedback before POST. */
   submitFormWithFeedback(): void {
-    const formLabels = this.LoadedSteps.map((step: any) => step[0]?.formLabel || 'Unknown');
+    const formLabels = this.LoadedSteps.map(s => s.formLabel || 'Unknown');
 
-    // Validate all patient forms
-    const patientValidation = this.validationService.validateAllPatientForms(
-      this.patientForms,
-      formLabels
+    // Validate participant 0
+    const p0Validation = this.validationService.validateParticipantForms(
+      this.participantForms[0] ?? [],
+      formLabels,
+      0
     );
 
-    if (!patientValidation.isValid) {
-      this.patientForms.forEach(f => f.markAllAsTouched());
+    if (!p0Validation.isValid) {
+      this.participantForms[0].forEach(f => f.markAllAsTouched());
       this.showErrorModal(
-        `Please fix the following errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(patientValidation.errors)}`
+        `Please fix the following errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(p0Validation.errors)}`
       );
       return;
     }
 
-    // Validate partner forms if married
-    if (this.showPartnerTab) {
-      const partnerErrors = this.validationService.validateAllPartnerForms(
-        this.partnerForms,
-        formLabels
+    // Validate participant 1 if joint mode
+    if (this.isJointMode && this.participantForms[1]) {
+      const p1Validation = this.validationService.validateParticipantForms(
+        this.participantForms[1],
+        formLabels,
+        1
       );
-
-      if (partnerErrors.length > 0) {
-        this.partnerForms.forEach(f => f.markAllAsTouched());
+      if (p1Validation.errors.length > 0) {
+        this.participantForms[1].forEach(f => f.markAllAsTouched());
         this.showErrorModal(
-          `Please fix partner form errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(partnerErrors)}`
+          `Please fix partner form errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(p1Validation.errors)}`
         );
         return;
       }
     }
 
-    // All valid, submit
-    const snapshots = this.toStepSnapshots();
-    const formatA: StepGroupedPayload = this.payloadBuilder.buildStepGroupedPayload(snapshots);
-    const formatB: ParticipantPayload = this.payloadBuilder.buildParticipantPayload(snapshots);
-
-    console.log('PatientCaptureV2 - Format A (Backend):', formatA);
-    console.log('PatientCaptureV2 - Format B (Audit):', formatB);
-
-    const result = {
-      backend: formatA,
-      audit: formatB,
-      legacyFormat: {
-        patient: this.patientForms.map(f => f.value),
-        partner: this.showPartnerTab ? this.partnerForms.map(f => f.value) : null,
-      }
-    };
-
-    this.showToast('Patient record submitted successfully!');
-    setTimeout(() => this.dialogRef.close(result), 1200);
+    // All valid — submit via HTTP
+    this.submitForm();
   }
 
   close(): void {
@@ -482,7 +574,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
   showToast(msg: string, ms = 2800): void {
     this.toastMsg = msg;
     this.toastVisible = true;
-    setTimeout(() => (this.toastVisible = false), ms);
+    setTimeout(() => { this.toastVisible = false }, ms);
   }
 
   showErrorModal(message: string): void {
@@ -494,9 +586,6 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     this.errorModalVisible = false;
   }
 
-  /**
-   * Navigate to a specific step from error message
-   */
   goToStepFromError(stepIndex: number): void {
     this.goToStep(stepIndex);
     this.closeErrorModal();
@@ -504,4 +593,9 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscape(): void { this.close(); }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }

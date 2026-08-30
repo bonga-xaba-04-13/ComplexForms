@@ -11,35 +11,25 @@ import {
 
 /**
  * Service for managing draft saves to localStorage.
- * Stores both Format A (backend) and Format B (audit) payloads together.
  *
- * Features:
- * - Save/restore form progress with both payload formats
- * - Error handling (quota exceeded, corrupted data)
- * - Schema versioning for future migrations
- * - Simple KISS implementation (no compression, single draft per user)
+ * Schema versions:
+ *   v1 – used `patient`/`partner` fields on StepSnapshot; 'single'/'married' modes
+ *   v2 – uses indexed `participants` record; 'individual'/'joint' modes
+ *
+ * getDraft() accepts both v1 and v2 and migrates v1 in-memory.
  */
 @Injectable({ providedIn: 'root' })
 export class DraftService {
   private readonly KEY = 'patient_capture_draft';
   private readonly SIMPLE_KEY = 'patient_capture_draft_simple';
-  private readonly SCHEMA_VERSION = 1;
+  private readonly SCHEMA_VERSION = 2;
   private readonly QUOTA_LIMIT = 5 * 1024 * 1024; // 5MB estimate
 
   constructor(private payloadBuilder: PayloadBuilder) {}
 
-  /**
-   * Save current form progress as a draft (both formats).
-   * Overwrites previous draft if it exists.
-   *
-   * @param snapshots Form step snapshots from PatientCaptureV2
-   * @param captureMode 'single' or 'married'
-   * @param metadata Current step progress metadata
-   * @throws Error if save fails (e.g., quota exceeded)
-   */
   saveDraft(
     snapshots: StepSnapshot[],
-    captureMode: 'single' | 'married',
+    captureMode: 'individual' | 'joint',
     metadata: DraftMetadata
   ): void {
     try {
@@ -58,10 +48,8 @@ export class DraftService {
       const json = JSON.stringify(draftData);
       localStorage.setItem(this.KEY, json);
     } catch (error) {
-      // Handle quota exceeded
       if (this.isQuotaExceeded(error)) {
         this.clearDraft();
-        // Retry once after clearing
         try {
           const formatA = this.payloadBuilder.buildStepGroupedPayload(snapshots);
           const formatB = this.payloadBuilder.buildParticipantPayload(snapshots);
@@ -83,57 +71,38 @@ export class DraftService {
     }
   }
 
-  /**
-   * Retrieve saved draft from localStorage if it exists.
-   * Validates schema version before returning.
-   *
-   * @returns DraftData if valid draft exists, null otherwise
-   */
   getDraft(): DraftData | null {
     try {
       const json = localStorage.getItem(this.KEY);
-      if (!json) {
-        return null;
-      }
+      if (!json) return null;
 
       const draft = JSON.parse(json) as DraftData;
 
-      // Validate schema version
-      if (draft.schemaVersion !== this.SCHEMA_VERSION) {
-        console.warn(
-          `Draft schema version mismatch: expected ${this.SCHEMA_VERSION}, got ${draft.schemaVersion}`
-        );
-        // For now, return null; in future could migrate here
-        return null;
+      // Accept both schema versions
+      if (draft.schemaVersion === 2) {
+        return draft;
       }
 
-      return draft;
+      if (draft.schemaVersion === 1) {
+        return this.migrateV1Draft(draft);
+      }
+
+      console.warn(`Unknown schema version ${draft.schemaVersion}`);
+      return null;
     } catch (error) {
       console.error('Failed to parse draft from localStorage:', error);
       return null;
     }
   }
 
-  /**
-   * Check if a valid draft exists in localStorage.
-   */
   hasDraft(): boolean {
     return this.getDraft() !== null;
   }
 
-  /**
-   * Restore draft data as snapshots and metadata for form population.
-   * Returns null if no valid draft exists.
-   *
-   * @returns RestoreContext with snapshots and metadata, or null
-   */
   restoreDraft(): RestoreContext | null {
     const draft = this.getDraft();
-    if (!draft) {
-      return null;
-    }
+    if (!draft) return null;
 
-    // Extract snapshots from stored payload (Format B is easiest to convert back)
     const snapshots = this.extractSnapshotsFromDraft(draft);
 
     return {
@@ -144,9 +113,6 @@ export class DraftService {
     };
   }
 
-  /**
-   * Clear the saved draft from localStorage.
-   */
   clearDraft(): void {
     try {
       localStorage.removeItem(this.KEY);
@@ -156,37 +122,25 @@ export class DraftService {
   }
 
   /**
-   * Save simplified draft (format mirrors backend payload, no metadata).
-   * Stores only non-empty form values in a single compact structure.
-   *
-   * @param snapshots Form step snapshots from PatientCaptureV2
-   * @param captureMode 'single' or 'married'
-   * @throws Error if save fails
+   * Save simplified draft (mirrors backend payload, no metadata).
    */
   saveSimpleDraft(
     snapshots: StepSnapshot[],
-    captureMode: 'single' | 'married'
+    captureMode: 'individual' | 'joint'
   ): void {
     try {
       const payload: Record<string, ParticipantValues[]> = {};
 
       for (const snap of snapshots) {
-        const patientValues = this.omitEmpty(snap.patient);
-        const partnerValues = snap.allowDynamicParticipants
-          ? this.omitEmpty(snap.partner)
-          : null;
+        const participantValuesList = Object.keys(snap.participants)
+          .map(Number)
+          .sort((a, b) => a - b)
+          .map(idx => this.omitEmpty(snap.participants[idx] || {}));
 
-        // Skip steps where both patient and partner are empty
-        const hasData =
-          Object.keys(patientValues).length > 0 ||
-          (partnerValues && Object.keys(partnerValues).length > 0);
+        const hasData = participantValuesList.some(v => Object.keys(v).length > 0);
         if (!hasData) continue;
 
-        const arr: ParticipantValues[] = [patientValues];
-        if (partnerValues && Object.keys(partnerValues).length > 0) {
-          arr.push(partnerValues);
-        }
-        payload[snap.stepName] = arr;
+        payload[snap.stepName] = participantValuesList;
       }
 
       const draft = {
@@ -201,61 +155,45 @@ export class DraftService {
     }
   }
 
-  /**
-   * Restore simplified draft from localStorage.
-   * Returns null if no valid draft exists.
-   *
-   * @returns Object with captureMode and snapshots, or null
-   */
   restoreSimpleDraft(): {
-    captureMode: 'single' | 'married';
+    captureMode: 'individual' | 'joint';
     snapshots: StepSnapshot[];
   } | null {
     try {
       const raw = localStorage.getItem(this.SIMPLE_KEY);
-      if (!raw) {
-        return null;
-      }
+      if (!raw) return null;
 
       const draft = JSON.parse(raw) as {
-        captureMode: 'single' | 'married';
+        captureMode: string;
         schemaVersion?: number;
         payload: Record<string, ParticipantValues[]>;
       };
 
-      if (!draft?.payload) {
-        return null;
-      }
+      if (!draft?.payload) return null;
 
       const snapshots: StepSnapshot[] = Object.entries(draft.payload).map(
         ([stepName, values]) => ({
           stepName,
           allowDynamicParticipants: values.length > 1,
-          patient: values[0] ?? {},
-          partner: values[1] ?? {}
+          participants: Object.fromEntries(
+            values.map((v, idx) => [idx, v])
+          )
         })
       );
 
-      return {
-        captureMode: draft.captureMode,
-        snapshots
-      };
+      // Normalize capture mode string
+      const mode = (draft.captureMode === 'joint') ? 'joint' : 'individual';
+
+      return { captureMode: mode, snapshots };
     } catch (error) {
       console.error('Failed to parse simple draft:', error);
       return null;
     }
   }
 
-  /**
-   * Get current draft size in bytes and as percentage of quota.
-   *
-   * @returns Size information or null if no draft exists
-   */
   getDraftSize(): DraftSizeInfo | null {
     const draft = this.getDraft();
-    if (!draft) {
-      return null;
-    }
+    if (!draft) return null;
 
     const json = JSON.stringify(draft);
     const bytes = new Blob([json]).size;
@@ -267,14 +205,8 @@ export class DraftService {
     };
   }
 
-  /**
-   * Check if error is a quota exceeded error.
-   */
   private isQuotaExceeded(error: unknown): boolean {
-    if (!(error instanceof Error)) {
-      return false;
-    }
-
+    if (!(error instanceof Error)) return false;
     return (
       error.name === 'QuotaExceededError' ||
       error.message.includes('quota') ||
@@ -282,9 +214,6 @@ export class DraftService {
     );
   }
 
-  /**
-   * Remove null, empty string, and undefined values from an object.
-   */
   private omitEmpty(values: ParticipantValues): ParticipantValues {
     return Object.fromEntries(
       Object.entries(values).filter(
@@ -294,28 +223,83 @@ export class DraftService {
   }
 
   /**
+   * Migrate a v1 draft (patient/partner → indexed participants).
+   * v1 Format A arrays are already positional [patient, partner], so we rebuild
+   * snapshots from them directly.
+   */
+  private migrateV1Draft(v1: DraftData): DraftData {
+    const formatA = v1.formatA;
+    const formatB = v1.formatB as any; // may reference old role field
+
+    // Rebuild format B for v2
+    const participants = [] as any[];
+    const maxIdx = Math.max(
+      ...Object.values(formatA as Record<string, any[]>)
+        .flatMap(arr => arr.length - 1)
+    );
+    for (let i = 0; i <= maxIdx; i++) {
+      const steps = Object.keys(formatA).map(stepName => {
+        const val = (formatA as Record<string, any[]>)[stepName]?.[i];
+        // Try to find matching step label from old format B
+        let stepLabel = '';
+        if (formatB.participants) {
+          // v1 used 'role' field; map patient→0, partner→1 or index-based
+          const p = formatB.participants.find((p: any) => p.participantIndex === i || p.roleIndex === i);
+          if (p) {
+            const entry = p.steps?.find((s: any) => s.stepName === stepName);
+            stepLabel = entry?.stepLabel || '';
+          }
+        }
+        return {
+          stepName,
+          stepLabel,
+          values: val || {}
+        };
+      });
+      participants.push({ participantIndex: i, steps });
+    }
+
+    // Legacy mode values ('single'/'married') are compatible with string comparison;
+    // newer v2 values are already 'individual'/'joint'. Use as string to avoid TS error.
+    const rawMode = (v1.captureMode as string);
+    const newCaptureMode = rawMode === 'joint' || rawMode === 'married' ? 'joint' : 'individual';
+
+    const newFormatB: any = {
+      captureMode: newCaptureMode,
+      capturedAt: formatB.capturedAt || new Date().toISOString(),
+      participants
+    };
+
+    return {
+      ...v1,
+      schemaVersion: 2,
+      captureMode: newCaptureMode,
+      formatA,
+      formatB: newFormatB
+    };
+  }
+
+  /**
    * Extract StepSnapshot[] from stored DraftData.
-   * Converts Format B (participant-centric) back to snapshots.
+   * Uses Format A arrays which are already positional by participant index.
    */
   private extractSnapshotsFromDraft(draft: DraftData): StepSnapshot[] {
     const snapshots: StepSnapshot[] = [];
 
-    // Get step names from Format A
-    for (const [stepName, participantValues] of Object.entries(draft.formatA)) {
-      // Find matching step info from Format B
-      const patientStep = draft.formatB.participants[0]?.steps.find(
-        s => s.stepName === stepName
+    for (const [stepName, participantValuesList] of Object.entries(draft.formatA)) {
+      // Find step label from Format B participant 0
+      const p0 = draft.formatB.participants?.find(
+        (p: any) => p.participantIndex === 0
       );
-      const partnerStep = draft.formatB.participants[1]?.steps.find(
-        s => s.stepName === stepName
-      );
+      const entry = p0?.steps?.find((s: any) => s.stepName === stepName);
 
       snapshots.push({
         stepName,
-        stepLabel: patientStep?.stepLabel,
-        allowDynamicParticipants: participantValues.length > 1,
-        patient: patientStep?.values || {},
-        partner: partnerStep?.values || {}
+        stepLabel: entry?.stepLabel,
+        allowDynamicParticipants: participantValuesList.length > 1,
+        participants: Object.fromEntries(
+          participantValuesList.map((val, idx) => [idx, val])
+        )
       });
     }
 

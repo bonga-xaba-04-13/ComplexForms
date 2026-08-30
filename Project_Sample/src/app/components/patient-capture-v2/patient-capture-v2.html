@@ -7,8 +7,8 @@
         <div class="auto__header-title">Patient Intake Registration</div>
         <div class="auto__header-sub">
           Step {{ currentStep + 1 }} of {{ TOTAL }} — {{ currentStepDef?.formLabel || 'Loading...' }}
-          @if (showPartnerTab) {
-            <span class="auto__header-badge">&#9679; Married capture</span>
+          @if (isJointMode) {
+            <span class="auto__header-badge">&#9679; Joint capture — {{ participantIndexes.length }} participants</span>
           }
         </div>
       </div>
@@ -39,7 +39,7 @@
           [class.auto__step-complete]="completedSteps.has(i)"
           (click)="goToStep(i)">
           <span class="auto__step-num">{{ i + 1 }}</span>
-          <span class="auto__step-label">{{ step[0]?.formLabel }}</span>
+          <span class="auto__step-label">{{ step.formLabel }}</span>
           @if (completedSteps.has(i)) {
             <span class="auto__step-status">&#10003;</span>
           }
@@ -50,47 +50,54 @@
     <!-- MAIN (tab bar + scrollable stage) -->
     <div class="auto__main">
 
+      <!-- ── Capture Mode Toggle (first step only) ─────────────────────── -->
+      @if (isFirstStep && captureMode !== null) {
+        <div class="capture-mode-toggle">
+          <label class="capture-mode-label">Capture Mode:</label>
+          <button
+            class="cmode-btn"
+            [class.cmode-btn--active]="captureMode === 'individual'"
+            (click)="setCaptureMode('individual')">
+            Individual
+          </button>
+          <button
+            class="cmode-btn"
+            [class.cmode-btn--active]="captureMode === 'joint'"
+            (click)="setCaptureMode('joint')">
+            Joint
+          </button>
+        </div>
+      }
+
       <!-- ── Participant tab bar ─────────────────────────────────────────── -->
-      <!-- Appears on ALL steps once "Married / Partnered" is selected.      -->
-      <!-- Lets the capturer switch between Patient and Spouse/Partner data.  -->
-      <div class="auto__tab-bar" [class.auto__visible]="showPartnerTab">
+      <!-- Visible whenever joint mode is active.                        -->
+      <!-- Lets the capturer switch between participants' data.         -->
+      <div class="auto__tab-bar" [class.auto__visible]="isJointMode">
+        @for (idx of participantIndexes; track idx) {
+          <button
+            class="auto__tab-btn"
+            [class.auto__tab-active]="activeParticipant === idx"
+            (click)="switchParticipant(idx)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="7" r="4"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            </svg>
+            Participant {{ idx + 1 }}
+            @if (activeParticipant === idx) {
+              <span class="auto__tab-badge auto__tab-badge--p1">Active</span>
+            } @else {
+              <span class="auto__tab-badge">{{ getParticipantProgress(idx) }}</span>
+            }
+          </button>
+        }
 
-        <button
-          class="auto__tab-btn"
-          [class.auto__tab-active]="activeTab === 'patient'"
-          (click)="switchTab('patient')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="7" r="4"/>
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          </svg>
-          Participant 1 — Patient
-          <span class="auto__tab-badge auto__tab-badge--p1">Active</span>
-        </button>
-
-        <button
-          class="auto__tab-btn"
-          [class.auto__tab-active]="activeTab === 'partner'"
-          (click)="switchTab('partner')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="7" r="4"/>
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          </svg>
-          Participant 2 — Spouse / Partner
-          <span class="auto__tab-badge">{{ partnerProgress }}</span>
-        </button>
-
-        <!-- Contextual hint shown inside the tab bar -->
         <span class="auto__tab-hint">
           Switch tabs to capture details for each participant separately
         </span>
-
       </div>
 
       <!-- ── STAGE ───────────────────────────────────────────────────────── -->
-      <!-- Form-group-specific components render based on form type.         -->
-      <!-- Each component handles its own fields, validation, and logic.     -->
       <div class="auto__form-panels" #panelsScroll>
 
         @switch (getFormGroupType(currentStepDef)) {
@@ -101,7 +108,7 @@
               [formGroup]="activeFormGroup"
               [stepLabel]="currentStepDef?.formLabel || ''"
               [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
+              [participantIndex]="activeParticipant"
               [isEditing]="true"
               (fieldChanged)="onFieldChanged($event)">
             </app-personal-info-form>
@@ -114,45 +121,9 @@
               [formGroup]="activeFormGroup"
               [stepLabel]="currentStepDef?.formLabel || ''"
               [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
+              [participantIndex]="activeParticipant"
               [isEditing]="true">
             </app-contact-info-form>
-          }
-
-          <!-- Medical History -->
-          @case ('medical') {
-            <app-medical-history-form
-              [controls]="activeControls"
-              [formGroup]="activeFormGroup"
-              [stepLabel]="currentStepDef?.formLabel || ''"
-              [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
-              [isEditing]="true">
-            </app-medical-history-form>
-          }
-
-          <!-- Medications -->
-          @case ('medications') {
-            <app-medications-form
-              [controls]="activeControls"
-              [formGroup]="activeFormGroup"
-              [stepLabel]="currentStepDef?.formLabel || ''"
-              [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
-              [isEditing]="true">
-            </app-medications-form>
-          }
-
-          <!-- Lifestyle & Social -->
-          @case ('lifestyle') {
-            <app-lifestyle-form
-              [controls]="activeControls"
-              [formGroup]="activeFormGroup"
-              [stepLabel]="currentStepDef?.formLabel || ''"
-              [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
-              [isEditing]="true">
-            </app-lifestyle-form>
           }
 
           <!-- Insurance & Financial -->
@@ -162,7 +133,7 @@
               [formGroup]="activeFormGroup"
               [stepLabel]="currentStepDef?.formLabel || ''"
               [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
+              [participantIndex]="activeParticipant"
               [isEditing]="true">
             </app-insurance-form>
           }
@@ -174,7 +145,7 @@
               [formGroup]="activeFormGroup"
               [stepLabel]="currentStepDef?.formLabel || ''"
               [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
+              [participantIndex]="activeParticipant"
               [isEditing]="true">
             </app-emergency-contacts-form>
           }
@@ -186,9 +157,8 @@
               [formGroup]="activeFormGroup"
               [stepLabel]="currentStepDef?.formLabel || ''"
               [stepDescription]="currentStepDef?.formDescription || ''"
-              [isPartner]="activeTab === 'partner'"
-              [isEditing]="true"
-              (maritalChanged)="onMaritalChange($event)">
+              [participantIndex]="activeParticipant"
+              [isEditing]="true">
             </app-dynamic-form>
           }
         }

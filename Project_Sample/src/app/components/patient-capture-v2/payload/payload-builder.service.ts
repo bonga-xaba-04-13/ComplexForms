@@ -12,19 +12,7 @@ import {
 /**
  * Service for building structured payloads from captured form data.
  *
- * Provides two output formats:
- * 1. StepGroupedPayload (Format A) — compact, backend-friendly
- * 2. ParticipantPayload (Format B) — audit-friendly, participant-centric
- *
- * Why a service:
- * - Consistent with project's DI pattern
- * - Mockable in tests
- * - Stateless (pure methods) → singleton is safe
- *
- * Dependencies:
- * - None. The builder receives fully extracted data.
- * - Does not call FormService, HTTP, or other APIs.
- * - Trivially testable without TestBed.
+ * Participants are now indexed (0-based) instead of named roles.
  */
 @Injectable({ providedIn: 'root' })
 export class PayloadBuilder {
@@ -32,13 +20,7 @@ export class PayloadBuilder {
   /**
    * Build Format A: Step-grouped payload (backend contract).
    *
-   * Structure: { stepName → [patient, (partner)], ... }
-   * - Single step: array length = 1
-   * - Married step: array length = 2 [patient, partner]
-   *
-   * @param steps Array of step snapshots (one per form)
-   * @param options.omitEmpty If true, drop empty/null fields
-   * @returns Record mapping step name to array of participant values
+   * Structure: { stepName → [participant0_values, participant1_values, ...] }
    */
   buildStepGroupedPayload(
     steps: StepSnapshot[],
@@ -47,8 +29,7 @@ export class PayloadBuilder {
     const result: StepGroupedPayload = {};
 
     for (const step of steps) {
-      const participants = this.buildParticipantsForStep(step, options);
-      result[step.stepName] = participants;
+      result[step.stepName] = this.buildParticipantsForStep(step, options);
     }
 
     return result;
@@ -59,58 +40,49 @@ export class PayloadBuilder {
    *
    * Structure:
    * {
-   *   captureMode: "single" | "married",
+   *   captureMode: "individual" | "joint",
    *   capturedAt: "ISO-timestamp",
    *   participants: [
-   *     { role: "patient", steps: [...] },
-   *     { role: "partner", steps: [...] }  // only if married
+   *     { participantIndex: 0, steps: [...] },
+   *     { participantIndex: 1, steps: [...] }  // only if joint
    *   ]
    * }
-   *
-   * @param steps Array of step snapshots
-   * @param options.omitEmpty If true, drop empty/null fields
-   * @param options.now Override timestamp (for deterministic testing)
-   * @returns ParticipantPayload with metadata and participant sections
    */
   buildParticipantPayload(
     steps: StepSnapshot[],
     options: BuildOptions = {}
   ): ParticipantPayload {
-    // Determine capture mode by checking if any step has partner data
-    const isMaRRied = steps.some(step => this.hasPartnerData(step, options));
+    // Determine capture mode: any participant beyond index 0 has data?
+    const hasMultipleParticipants = steps.some(step => {
+      const p1Data = step.participants[1];
+      return !!p1Data && Object.keys(this.filterEmpty(p1Data, options.omitEmpty)).length > 0;
+    });
 
-    // Build patient section
-    const patientSteps = steps.map(step => ({
-      stepName: step.stepName,
-      ...(step.stepLabel && { stepLabel: step.stepLabel }),
-      values: this.filterEmpty(step.patient, options.omitEmpty)
-    } as ParticipantStepEntry));
+    const participants: ParticipantSection[] = [];
 
-    const participants: ParticipantSection[] = [
-      {
-        role: 'patient',
-        steps: patientSteps
-      }
-    ];
+    // Build section for each participant that has data
+    const maxIndex = steps.reduce((max, step) => {
+      return Math.max(max, ...Object.keys(step.participants).map(Number));
+    }, 0);
 
-    // Build partner section if married
-    if (isMaRRied) {
-      const partnerSteps = steps
-        .filter(step => step.allowDynamicParticipants)
-        .map(step => ({
+    for (let idx = 0; idx <= maxIndex; idx++) {
+      const participantSteps = steps.map(step => {
+        const values = step.participants[idx] || {};
+        return {
           stepName: step.stepName,
           ...(step.stepLabel && { stepLabel: step.stepLabel }),
-          values: this.filterEmpty(step.partner, options.omitEmpty)
-        } as ParticipantStepEntry));
+          values: this.filterEmpty(values, options.omitEmpty)
+        } as ParticipantStepEntry;
+      });
 
       participants.push({
-        role: 'partner',
-        steps: partnerSteps
+        participantIndex: idx,
+        steps: participantSteps
       });
     }
 
     return {
-      captureMode: isMaRRied ? 'married' : 'single',
+      captureMode: hasMultipleParticipants ? 'joint' : 'individual',
       capturedAt: options.now ? options.now() : new Date().toISOString(),
       participants
     };
@@ -118,40 +90,23 @@ export class PayloadBuilder {
 
   /**
    * Build array of participant values for a single step.
-   * Returns [patient] for single steps, [patient, partner] for married steps.
+   * Returns participant values in index order.
    */
   private buildParticipantsForStep(
     step: StepSnapshot,
     options: BuildOptions
   ): ParticipantValues[] {
-    const participants: ParticipantValues[] = [
-      this.filterEmpty(step.patient, options.omitEmpty)
-    ];
+    const sortedIndices = Object.keys(step.participants)
+      .map(Number)
+      .sort((a, b) => a - b);
 
-    // Include partner if this step allows dynamic participants and partner has data
-    if (step.allowDynamicParticipants && this.hasPartnerData(step, options)) {
-      participants.push(this.filterEmpty(step.partner, options.omitEmpty));
-    }
-
-    return participants;
-  }
-
-  /**
-   * Check if a step's partner data is non-empty.
-   * Used to determine capture mode and whether to include partner in arrays.
-   */
-  private hasPartnerData(step: StepSnapshot, options: BuildOptions): boolean {
-    if (!step.allowDynamicParticipants) {
-      return false;
-    }
-
-    const partner = this.filterEmpty(step.partner, options.omitEmpty);
-    return Object.keys(partner).length > 0;
+    return sortedIndices.map(idx =>
+      this.filterEmpty(step.participants[idx], options.omitEmpty)
+    );
   }
 
   /**
    * Filter out empty/null values if omitEmpty is true.
-   * Otherwise return the object as-is.
    */
   private filterEmpty(
     values: ParticipantValues,
@@ -161,7 +116,6 @@ export class PayloadBuilder {
       return { ...values }; // Return copy
     }
 
-    // Filter out null, undefined, empty string, empty array, empty object
     return Object.fromEntries(
       Object.entries(values).filter(([_, value]) => {
         if (value === null || value === undefined || value === '') {

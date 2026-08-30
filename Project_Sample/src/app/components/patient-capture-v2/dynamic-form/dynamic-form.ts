@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup } from '@angular/forms';
 import { JsonFormControl, ControlOption } from '../../../models/form-fields';
@@ -15,10 +15,8 @@ export class DynamicForm implements OnChanges {
   @Input() formGroup!: FormGroup;
   @Input() stepLabel = '';
   @Input() stepDescription = '';
-  @Input() isPartner = false;
+  @Input() participantIndex = 0;
   @Input() isEditing = true;
-
-  @Output() maritalChanged = new EventEmitter<string>();
 
   suggestionMap: Record<string, ControlOption[]> = {};
   activeCombobox: string | null = null;
@@ -33,14 +31,13 @@ export class DynamicForm implements OnChanges {
     return !!(ctrl && ctrl.invalid && ctrl.touched);
   }
 
-  onRadioChange(control: JsonFormControl, value: string): void {
-    if (control.name.endsWith('maritalStatus')) {
-      this.maritalChanged.emit(value);
-    }
-  }
-
   isSpan2(control: JsonFormControl): boolean {
     return control.span2 === true || control.type === 'textarea' || control.type === 'check';
+  }
+
+  /** No-op: maritalStatus radio changes no longer emit events. Kept for backward compat. */
+  onRadioChange(_control: JsonFormControl, _value: string): void {
+    // Intentionally blank — used by template but no longer needed
   }
 
   onComboboxInput(control: JsonFormControl, value: string): void {

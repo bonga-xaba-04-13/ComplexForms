@@ -9,7 +9,8 @@ export abstract class BaseFormGroup implements OnChanges, OnDestroy {
   @Input() formGroup!: FormGroup;
   @Input() stepLabel = '';
   @Input() stepDescription = '';
-  @Input() isPartner = false;
+  /** Participant index (0-based) — replaces the old isPartner boolean. */
+  @Input() participantIndex = 0;
   @Input() isEditing = true;
 
   @Output() fieldChanged = new EventEmitter<{ fieldName: string; value: any }>();

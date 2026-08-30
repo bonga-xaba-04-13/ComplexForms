@@ -1,12 +1,14 @@
 /**
  * Type definitions for payload building in PatientCaptureV2.
  * Supports two output formats: StepGroupedPayload and ParticipantPayload.
+ *
+ * Participants are now indexed (0, 1, ...) instead of named ("patient" / "partner").
+ * Capture mode is 'individual' | 'joint'.
  */
 
 /**
  * Flat object representing a form's captured values.
  * Directly corresponds to FormGroup.value.
- * Example: { p_firstName: "Alice", p_lastName: "Smith", ... }
  */
 export type ParticipantValues = Record<string, unknown>;
 
@@ -14,16 +16,9 @@ export type ParticipantValues = Record<string, unknown>;
  * Options for customizing payload building behavior.
  */
 export interface BuildOptions {
-  /**
-   * If true, omit fields with empty/null values from the output.
-   */
+  /** If true, omit fields with empty/null values from the output. */
   omitEmpty?: boolean;
-
-  /**
-   * Override the timestamp used in Format B payloads.
-   * Defaults to new Date().toISOString().
-   * Useful for deterministic testing.
-   */
+  /** Override the timestamp used in Format B payloads. Defaults to new Date().toISOString(). */
   now?: () => string;
 }
 
@@ -33,38 +28,22 @@ export interface BuildOptions {
  * Created by toStepSnapshots() in the component.
  */
 export interface StepSnapshot {
-  /**
-   * Step identifier (e.g., "personal_info", "contact_info").
-   * Comes from form definition's keyname or derived.
-   */
+  /** Step identifier (e.g., "personal_info", "contact_info"). */
   stepName: string;
 
-  /**
-   * Human-readable form title (e.g., "Personal Information").
-   * Optional; used in Format B for display and audit.
-   */
+  /** Human-readable form title (e.g., "Personal Information"). */
   stepLabel?: string;
 
-  /**
-   * True if this step allows capturing both patient and partner data.
-   * Determines whether the output array has 1 or 2 elements.
-   */
+  /** True if this step is being captured for multiple participants (joint mode). */
   allowDynamicParticipants: boolean;
 
   /**
-   * Patient's form values for this step.
-   * Always present (non-null).
-   * Example: { p_firstName: "Alice", p_lastName: "Smith" }
+   * Captured values per participant index.
+   * Always contains at least key 0 (participant 1).
+   * In joint mode also contains key 1 (participant 2), etc.
+   * Example: { 0: { p_firstName: "Alice" }, 1: { p_firstName: "Bob" } }
    */
-  patient: ParticipantValues;
-
-  /**
-   * Partner's form values for this step.
-   * Present and filled if allowDynamicParticipants=true.
-   * Present but empty if allowDynamicParticipants=false.
-   * Example: { p_firstName: "Bob", p_lastName: "Smith" }
-   */
-  partner: ParticipantValues;
+  participants: Record<number, ParticipantValues>;
 }
 
 /**
@@ -77,24 +56,13 @@ export interface StepSnapshot {
  *   "contact_info": [{ p_email: "alice@example.com", ... }]
  * }
  *
- * Married mode example:
+ * Joint mode example:
  * {
  *   "personal_info": [
  *     { p_firstName: "Alice", ... },
  *     { p_firstName: "Bob", ... }
- *   ],
- *   "contact_info": [
- *     { p_email: "alice@example.com", ... },
- *     { p_email: "bob@example.com", ... }
  *   ]
  * }
- *
- * Rules:
- * - Key = step name (from StepSnapshot.stepName)
- * - Value = array of participant values
- * - Single step: array length = 1 (just patient)
- * - Married step: array length = 2 (patient, then partner)
- * - Empty fields can be omitted with omitEmpty: true
  */
 export type StepGroupedPayload = Record<string, ParticipantValues[]>;
 
@@ -103,36 +71,24 @@ export type StepGroupedPayload = Record<string, ParticipantValues[]>;
  * Groups all steps' data for a single participant.
  */
 export interface ParticipantSection {
-  /**
-   * Role identifier: "patient" or "partner".
-   */
-  role: 'patient' | 'partner';
+  /** Numeric index of the participant (0 = first person, 1 = second person, etc.). */
+  participantIndex: number;
 
-  /**
-   * Steps captured for this participant, in stepper order.
-   */
+  /** Steps captured for this participant, in stepper order. */
   steps: ParticipantStepEntry[];
 }
 
 /**
  * Single step entry within a ParticipantSection.
- * Represents one step's data for a participant.
  */
 export interface ParticipantStepEntry {
-  /**
-   * Step identifier (e.g., "personal_info").
-   */
+  /** Step identifier (e.g., "personal_info"). */
   stepName: string;
 
-  /**
-   * Human-readable step label (e.g., "Personal Information").
-   * Optional; omitted if not provided.
-   */
+  /** Human-readable step label (e.g., "Personal Information"). */
   stepLabel?: string;
 
-  /**
-   * The participant's form values for this step.
-   */
+  /** The participant's form values for this step. */
   values: ParticipantValues;
 }
 
@@ -142,11 +98,11 @@ export interface ParticipantStepEntry {
  *
  * Example (single mode):
  * {
- *   "captureMode": "single",
+ *   "captureMode": "individual",
  *   "capturedAt": "2026-06-28T13:45:00.000Z",
  *   "participants": [
  *     {
- *       "role": "patient",
+ *       "participantIndex": 0,
  *       "steps": [
  *         { "stepName": "personal_info", "values": { ... } },
  *         { "stepName": "contact_info", "values": { ... } }
@@ -155,56 +111,34 @@ export interface ParticipantStepEntry {
  *   ]
  * }
  *
- * Example (married mode):
+ * Example (joint mode):
  * {
- *   "captureMode": "married",
+ *   "captureMode": "joint",
  *   "capturedAt": "2026-06-28T13:45:00.000Z",
  *   "participants": [
- *     {
- *       "role": "patient",
- *       "steps": [ ... ]
- *     },
- *     {
- *       "role": "partner",
- *       "steps": [ ... ]
- *     }
+ *     { "participantIndex": 0, "steps": [ ... ] },
+ *     { "participantIndex": 1, "steps": [ ... ] }
  *   ]
  * }
- *
- * Suitable for:
- * - Audit logs
- * - Client-side rehydration
- * - Detailed tracking of what was captured
- * - User review screens
  */
 export interface ParticipantPayload {
-  /**
-   * Capture mode: "single" if only patient data, "married" if partner data exists.
-   * Determined by checking if any partner step has non-empty values.
-   */
-  captureMode: 'single' | 'married';
+  /** Capture mode: "individual" or "joint". */
+  captureMode: 'individual' | 'joint';
 
-  /**
-   * ISO 8601 timestamp when the payload was created.
-   * Defaults to current time; can be overridden via BuildOptions.now().
-   */
+  /** ISO 8601 timestamp when the payload was created. */
   capturedAt: string;
 
-  /**
-   * Array of participant sections (patient always present, partner only if married).
-   * Order: [patient, partner] if married; [patient] if single.
-   */
+  /** Array of participant sections ordered by index. */
   participants: ParticipantSection[];
 }
 
 /**
  * Union type representing either payload format.
- * Use as return type when a method can produce either format.
  */
 export type PayloadOutput = StepGroupedPayload | ParticipantPayload;
 
 /**
- * Metadata about a draft save (step progress, timestamps, etc.)
+ * Metadata about a draft save.
  */
 export interface DraftMetadata {
   currentStep: number;
@@ -214,11 +148,10 @@ export interface DraftMetadata {
 
 /**
  * Complete draft data including both payloads and metadata.
- * Stored in localStorage as JSON.
  */
 export interface DraftData {
   savedAt: string;
-  captureMode: 'single' | 'married';
+  captureMode: 'individual' | 'joint';
   formatA: StepGroupedPayload;
   formatB: ParticipantPayload;
   metadata: DraftMetadata;
@@ -227,17 +160,16 @@ export interface DraftData {
 
 /**
  * Context returned when restoring a draft.
- * Provides snapshots and metadata needed to populate forms.
  */
 export interface RestoreContext {
   snapshots: StepSnapshot[];
-  captureMode: 'single' | 'married';
+  captureMode: 'individual' | 'joint';
   currentStep: number;
   completedSteps: number[];
 }
 
 /**
- * Storage size information for monitoring quota usage.
+ * Storage size information.
  */
 export interface DraftSizeInfo {
   bytes: number;

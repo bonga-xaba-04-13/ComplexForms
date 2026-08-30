@@ -20,18 +20,6 @@ export class PersonalInfoForm extends BaseFormGroup implements OnChanges, OnInit
 
   ngOnInit(): void {
     this.loadFormOptions();
-
-    // Subscribe to maritalStatus changes to emit to parent (for partner tab)
-    const maritalControl = this.formGroup?.get('p_maritalStatus');
-    if (maritalControl) {
-      maritalControl.valueChanges
-        .pipe(takeUntil(this.destroy$))
-        .subscribe(value => {
-          if (value) {
-            this.emitFieldChange('maritalStatus', value);
-          }
-        });
-    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {

@@ -7,7 +7,8 @@ export interface ValidationError {
   fieldName: string;
   errorType: string;
   message: string;
-  participantType: 'patient' | 'partner';
+  /** Participant index (0-based). */
+  participantIndex: number;
 }
 
 export interface ValidationResult {
@@ -22,28 +23,11 @@ export interface ValidationResult {
 })
 export class ValidationService {
 
-  /**
-   * Get error message for a specific validator type
-   */
   private getErrorMessage(fieldName: string, errorType: string): string {
     const formattedFieldName = this.formatFieldName(fieldName);
-
-    const errorMessages: Record<string, string> = {
-      'required': `${formattedFieldName} is required`,
-      'email': `${formattedFieldName} must be a valid email address`,
-      'pattern': `${formattedFieldName} format is invalid`,
-      'minlength': `${formattedFieldName} is too short`,
-      'maxlength': `${formattedFieldName} is too long`,
-      'min': `${formattedFieldName} value is too low`,
-      'max': `${formattedFieldName} value is too high`,
-    };
-
-    return errorMessages[errorType] || `${formattedFieldName} is invalid`;
+    return `${formattedFieldName} is required`;
   }
 
-  /**
-   * Convert camelCase or snake_case field names to readable format
-   */
   private formatFieldName(fieldName: string): string {
     return fieldName
       .replace(/([A-Z])/g, ' $1')
@@ -52,21 +36,17 @@ export class ValidationService {
       .trim();
   }
 
-  /**
-   * Validate a single FormGroup and return field-level errors
-   */
   private validateFormGroup(
     formGroup: FormGroup,
     stepIndex: number,
     stepLabel: string,
-    participantType: 'patient' | 'partner' = 'patient'
+    participantIndex: number = 0
   ): ValidationError[] {
     const errors: ValidationError[] = [];
-
+    // Validate only if the form has any controls (skips empty stub groups)
     if (!formGroup || formGroup.status === 'INVALID') {
-      Object.keys(formGroup.controls).forEach(fieldName => {
+      Object.keys(formGroup?.controls ?? {}).forEach(fieldName => {
         const control = formGroup.get(fieldName);
-
         if (control && control.invalid && control.errors) {
           Object.keys(control.errors).forEach(errorType => {
             errors.push({
@@ -75,33 +55,38 @@ export class ValidationService {
               fieldName,
               errorType,
               message: this.getErrorMessage(fieldName, errorType),
-              participantType
+              participantIndex
             });
           });
         }
       });
     }
-
     return errors;
   }
 
   /**
-   * Validate all patient forms (current + prior steps)
+   * Validate all forms for a specific participant (all steps up to `validateUpToStep`).
    */
-  validateAllPatientForms(
-    patientForms: FormGroup[],
+  validateParticipantForms(
+    participantForms: FormGroup[],
     formLabels: string[],
+    participantIndex: number = 0,
     validateUpToStep?: number
   ): ValidationResult {
     const errors: ValidationError[] = [];
-    const upTo = validateUpToStep ?? patientForms.length - 1;
+    const upTo = validateUpToStep ?? participantForms.length - 1;
 
-    for (let i = 0; i <= upTo && i < patientForms.length; i++) {
+    for (let i = 0; i <= upTo && i < participantForms.length; i++) {
+      const fv = participantForms[i].value;
+      // For joint-mode participants beyond index 0, skip empty stubs
+      if (participantIndex > 0 && !Object.values(fv).some(v => v)) {
+        continue;
+      }
       const stepErrors = this.validateFormGroup(
-        patientForms[i],
+        participantForms[i],
         i,
         formLabels[i] || `Step ${i + 1}`,
-        'patient'
+        participantIndex
       );
       errors.push(...stepErrors);
     }
@@ -115,44 +100,15 @@ export class ValidationService {
   }
 
   /**
-   * Validate partner forms (current + prior steps)
-   */
-  validateAllPartnerForms(
-    partnerForms: FormGroup[],
-    formLabels: string[],
-    validateUpToStep?: number
-  ): ValidationError[] {
-    const errors: ValidationError[] = [];
-    const upTo = validateUpToStep ?? partnerForms.length - 1;
-
-    for (let i = 0; i <= upTo && i < partnerForms.length; i++) {
-      const formValue = partnerForms[i].value;
-      // Only validate if partner form has values (was filled in)
-      if (Object.keys(formValue).some(key => formValue[key])) {
-        const stepErrors = this.validateFormGroup(
-          partnerForms[i],
-          i,
-          formLabels[i] || `Step ${i + 1}`,
-          'partner'
-        );
-        errors.push(...stepErrors);
-      }
-    }
-
-    return errors;
-  }
-
-  /**
-   * Validate current step only
+   * Validate current step only.
    */
   validateCurrentStep(
     formGroup: FormGroup,
     stepIndex: number,
     stepLabel: string,
-    participantType: 'patient' | 'partner' = 'patient'
+    participantIndex: number = 0
   ): ValidationResult {
-    const errors = this.validateFormGroup(formGroup, stepIndex, stepLabel, participantType);
-
+    const errors = this.validateFormGroup(formGroup, stepIndex, stepLabel, participantIndex);
     return {
       isValid: errors.length === 0,
       errors,
@@ -162,13 +118,30 @@ export class ValidationService {
   }
 
   /**
-   * Generate human-readable summary of validation errors
+   * Convenience: validate ALL patient (participant 0) forms — legacy entry point used by old code paths.
+   * Kept temporarily during the transition but internally delegates to the indexed version.
    */
-  private generateSummary(errors: ValidationError[]): string {
-    if (errors.length === 0) {
-      return 'All fields are valid';
-    }
+  validateAllPatientForms(
+    patientForms: FormGroup[],
+    formLabels: string[],
+    validateUpToStep?: number
+  ): ValidationResult {
+    return this.validateParticipantForms(patientForms, formLabels, 0, validateUpToStep);
+  }
 
+  /**
+   * Legacy convenience: validate ALL partner forms. Delegates to indexed version.
+   */
+  validateAllPartnerForms(
+    partnerForms: FormGroup[],
+    formLabels: string[],
+    validateUpToStep?: number
+  ): ValidationError[] {
+    return this.validateParticipantForms(partnerForms, formLabels, 1, validateUpToStep).errors;
+  }
+
+  private generateSummary(errors: ValidationError[]): string {
+    if (errors.length === 0) return 'All fields are valid';
     const groupedByStep = this.groupErrorsByStep(errors);
     const stepSummaries = Object.entries(groupedByStep)
       .map(([label, stepErrors]) => {
@@ -178,7 +151,6 @@ export class ValidationService {
           .join(', ');
         return `${label}: ${fieldList}`;
       });
-
     if (stepSummaries.length <= 3) {
       return stepSummaries.join(' | ');
     } else {
@@ -186,29 +158,19 @@ export class ValidationService {
     }
   }
 
-  /**
-   * Group errors by step label for display
-   */
   private groupErrorsByStep(errors: ValidationError[]): Record<string, ValidationError[]> {
     return errors.reduce((acc, error) => {
       const key = error.stepLabel;
-      if (!acc[key]) {
-        acc[key] = [];
-      }
+      if (!acc[key]) acc[key] = [];
       acc[key].push(error);
       return acc;
     }, {} as Record<string, ValidationError[]>);
   }
 
-  /**
-   * Format errors for display in a modal/dialog
-   */
   formatErrorsForDisplay(errors: ValidationError[]): string {
     if (errors.length === 0) return 'No errors';
-
     const grouped = this.groupErrorsByStep(errors);
     const lines: string[] = [];
-
     Object.entries(grouped).forEach(([stepLabel, stepErrors]) => {
       lines.push(`${stepLabel}:`);
       const uniqueErrors = stepErrors.filter((e, i, arr) =>
@@ -219,7 +181,6 @@ export class ValidationService {
       });
       lines.push('');
     });
-
     return lines.join('\n').trim();
   }
 }
