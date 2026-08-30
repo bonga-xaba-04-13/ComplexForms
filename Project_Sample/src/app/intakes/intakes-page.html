@@ -1,0 +1,26 @@
+<mat-toolbar color="primary" class="intakes-toolbar">
+  <span>Patient Intakes</span>
+  <span class="spacer"></span>
+  <a mat-button routerLink="/home">Launcher</a>
+  <button mat-button (click)="logout()">
+    <mat-icon>logout</mat-icon>
+    Logout
+  </button>
+</mat-toolbar>
+
+<main class="intakes-page">
+  @if (error(); as err) {
+    <div class="error-banner" role="alert">{{ err }}</div>
+  }
+
+  <app-reusable-data-table
+    [data$]="data$"
+    [columns]="columns"
+    [pageSize]="pageSize()"
+    [searchable]="true"
+    searchPlaceholder="Search intakes…"
+    [loading$]="loading$"
+    (pageChange)="onPageChange($event)"
+    (searchChange)="onSearchChange($event)"
+    (rowClick)="onRowClick($event)" />
+</main>

@@ -1,0 +1,84 @@
+<div class="rdt-root">
+  @if (searchable) {
+    <div class="rdt-toolbar">
+      <mat-form-field appearance="outline" class="rdt-search">
+        <mat-label>{{ searchPlaceholder }}</mat-label>
+        <input
+          matInput
+          type="search"
+          [formControl]="searchControl"
+          autocomplete="off"
+          aria-label="Search">
+      </mat-form-field>
+    </div>
+  }
+
+  <div class="rdt-table-wrap">
+    @if (loading()) {
+      <div class="rdt-spinner-overlay" role="status" aria-label="Loading">
+        <mat-spinner diameter="36"></mat-spinner>
+      </div>
+    }
+
+    <table
+      mat-table
+      [dataSource]="rows()"
+      matSort
+      (matSortChange)="onSort($event)"
+      class="rdt-table">
+
+      @for (column of columns; track column.key) {
+        <ng-container [matColumnDef]="column.key">
+          <th
+            mat-header-cell
+            *matHeaderCellDef
+            [mat-sort-header]="column.sortable === false ? '' : column.key"
+            [style.width]="column.width || null"
+            [style.text-align]="column.align || 'start'">
+            {{ column.header }}
+          </th>
+
+          <td
+            mat-cell
+            *matCellDef="let row"
+            class="rdt-cell"
+            [style.width]="column.width || null"
+            [style.text-align]="column.align || 'start'"
+            (click)="onRowClick(row)">
+            {{ cellValue(row, column) }}
+          </td>
+        </ng-container>
+      }
+
+      <!-- Empty-state row spans all columns. -->
+      <ng-container matColumnDef="rdt-empty">
+        <td
+          mat-cell
+          *matCellDef="let _row"
+          [attr.colspan]="displayedColumns().length"
+          class="rdt-empty">
+          No records found
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: displayedColumns()"
+        class="rdt-row"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: ['rdt-empty']"
+        class="rdt-empty-row"
+        [hidden]="loading() || rows().length > 0"></tr>
+    </table>
+  </div>
+
+  <mat-paginator
+    [length]="total()"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="pageSizeOptions"
+    (page)="onPage($event)"
+    aria-label="Select page">
+  </mat-paginator>
+</div>

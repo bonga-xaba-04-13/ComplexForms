@@ -1,17 +1,30 @@
-<div class="launcher-container">
-  <div class="launcher-header">
-    <h1>Patient Data Forms</h1>
-    <button (click)="logout()" class="btn-logout">Logout</button>
-  </div>
+<mat-toolbar color="primary" class="launcher-toolbar">
+  <span>Patient Data Forms</span>
+  <span class="spacer"></span>
+  <a mat-button routerLink="/intakes">Intakes</a>
+  <button mat-button (click)="logout()">
+    <mat-icon>logout</mat-icon>
+    Logout
+  </button>
+</mat-toolbar>
 
-  <div class="launcher-content">
-    <div class="welcome-card">
-      <h2>Welcome</h2>
-      <p>Click the button below to open the Patient Intake Registration form.</p>
+<main class="launcher-content">
+  <mat-card appearance="outlined" class="welcome-card">
+    <mat-card-header>
+      <mat-card-title>Welcome</mat-card-title>
+    </mat-card-header>
 
-      <button (click)="openPatientCapture()" class="btn-open-form">
-        📋 Open Patient Capture Form
+    <mat-card-content>
+      <p>Click below to open the Patient Intake Registration form.</p>
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="openPatientCapture()">
+        Open Patient Capture Form
       </button>
-    </div>
-  </div>
-</div>
+    </mat-card-actions>
+  </mat-card>
+</main>

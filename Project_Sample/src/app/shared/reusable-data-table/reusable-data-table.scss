@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.rdt-root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.rdt-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rdt-search {
+  width: 100%;
+  max-width: 320px;
+}
+
+.rdt-table-wrap {
+  position: relative;
+  min-height: 120px;
+  overflow: auto;
+}
+
+.rdt-table {
+  width: 100%;
+}
+
+.rdt-cell {
+  cursor: pointer;
+}
+
+.rdt-row:hover .rdt-cell {
+  background-color: var(--mat-sys-surface-container);
+}
+
+.rdt-spinner-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.6);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.rdt-empty {
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 24px 0;
+}

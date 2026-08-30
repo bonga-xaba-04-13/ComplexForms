@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
 import { map, switchMap, shareReplay, catchError } from 'rxjs/operators';
+import { Page, PatientIntake } from '../models/page.model';
 
 interface ComboboxOption {
   label: string;
@@ -23,6 +24,30 @@ export class FormService {
 
   getStepperForm(): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/patient_intake_stepper`);
+  }
+
+  /**
+   * Fetch a page of patient intake records.
+   *
+   * Calls `GET /api/forms/patient/intakes?page=<n>&size=<n>[&q=<query>]`
+   * and returns the parsed `Page<PatientIntake>`.
+   *
+   * Errors are intentionally NOT swallowed here so that the consuming page
+   * (e.g. `IntakesPage`) can decide how to react.
+   */
+  getPatientIntakes(
+    page = 0,
+    size = 10,
+    search?: string,
+  ): Observable<Page<PatientIntake>> {
+    const params: Record<string, string | number> = { page, size };
+    if (search && search.trim().length > 0) {
+      params['q'] = search.trim();
+    }
+    return this.http.get<Page<PatientIntake>>(
+      `${this.apiUrl}/patient/intakes`,
+      { params: params as any },
+    );
   }
 
   getSubForm(keyname: string): Observable<any> {

@@ -10,8 +10,9 @@ import { ContactInfoForm } from './form-groups/contact-info-form/contact-info-fo
 import { InsuranceForm } from './form-groups/insurance-form/insurance-form';
 import { EmergencyContactsForm } from './form-groups/emergency-contacts-form/emergency-contacts-form';
 import { PayloadBuilder } from './payload/payload-builder.service';
-import { StepSnapshot, ParticipantPayload } from './payload/payload.types';
+import { StepSnapshot, StepGroupedPayload, ParticipantPayload } from './payload/payload.types';
 import { DraftService } from './services/draft.service';
+import { FormPatchService } from './services/form-patch.service';
 import { ValidationService } from './services/validation.service';
 import { SubmissionService } from './services/submission.service';
 import { Subject } from 'rxjs';
@@ -79,6 +80,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     private formService: FormService,
     private payloadBuilder: PayloadBuilder,
     private draftService: DraftService,
+    private formPatchService: FormPatchService,
     private validationService: ValidationService,
     private submissionService: SubmissionService,
     private dialogRef: MatDialogRef<PatientCaptureV2>,
@@ -125,19 +127,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
   }
 
   private applyRestoredData(restored: any): void {
-    restored.snapshots.forEach((snapshot: StepSnapshot) => {
-      const idx = this.LoadedSteps.findIndex(s => s.keyname === snapshot.stepName || s.formLabel === snapshot.stepLabel);
-      if (idx === -1) return;
-      const stepIdx = Math.max(0, idx);
-
-      Object.entries(snapshot.participants).forEach(([pIdx, values]) => {
-        const numericIdx = Number(pIdx);
-        const forms = this.participantForms[numericIdx]?.[stepIdx];
-        if (forms) {
-          forms.patchValue(values as Record<string, unknown>);
-        }
-      });
-    });
+    this.formPatchService.patch(this.participantForms, restored.snapshots, this.LoadedSteps);
 
     const restoredStep = Math.min(restored.currentStep, this.TOTAL - 1);
     this.currentStep = restoredStep;
@@ -150,6 +140,47 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
       capturedData: this.toCapturedDataMap(),
     }));
     this.showToast('Draft restored', 2500);
+  }
+
+  /**
+   * Patch every loaded form group (all steps × all participants) with data
+   * returned from an API endpoint (e.g. an existing patient record).
+   *
+   * Accepts any of the existing payload shapes — no new type required:
+   *   - StepSnapshot[]       (draft-restore shape)
+   *   - StepGroupedPayload   (Format A — backend contract)
+   *   - ParticipantPayload   (Format B — audit shape)
+   *
+   * Must be called after {@link initializeLoadedSteps} has built the FormGroups.
+   *
+   * ```ts
+   * // after this.mypatientApi.get(patientId) resolves:
+   * this.applyApiData(data);
+   * ```
+   */
+  applyApiData(
+    data: StepSnapshot[] | StepGroupedPayload | ParticipantPayload
+  ): void {
+    if (this.TOTAL === 0) {
+      console.warn('[PatientCaptureV2] applyApiData skipped — forms not loaded yet.');
+      return;
+    }
+
+    this.formPatchService.patch(
+      this.participantForms,
+      data,
+      this.LoadedSteps,
+      (participantIndex) => this.buildParticipantFormsForIndex(participantIndex)
+    );
+
+    // Mirror the patched values into the NgRx store (same as draft restore).
+    this.store.dispatch(restorePatientCaptureState({
+      currentStep: this.currentStep,
+      activeParticipant: this.activeParticipant,
+      captureMode: this.captureMode,
+      completedSteps: Array.from(this.completedSteps),
+      capturedData: this.toCapturedDataMap(),
+    }));
   }
 
   // ── Load Forms ──────────────────────────────────────────────────────────
@@ -178,7 +209,7 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
     // Always build participant 0 forms
     this.participantForms[0] = [];
     forms.forEach((form: any) => {
-      FormGroupRegistry.logFormTypeDetection(form, form.definition);
+      // FormGroupRegistry.logFormTypeDetection(form, form.definition);
       const patientForm = this.buildGroup(form.definition);
       this.participantForms[0].push(patientForm);
       this.LoadedSteps.push(form);
@@ -198,10 +229,12 @@ export class PatientCaptureV2 implements OnInit, OnDestroy {
   }
 
   /** Build form groups for a given participant index (used when switching to joint mode). */
-  private buildParticipantFormsForIndex(participantIndex: number): void {
-    this.participantForms[participantIndex] = this.LoadedSteps.map(step =>
+  private buildParticipantFormsForIndex(participantIndex: number): FormGroup[] {
+    const forms = this.LoadedSteps.map(step =>
       this.buildGroup(step.definition)
     );
+    this.participantForms[participantIndex] = forms;
+    return forms;
   }
 
   private buildGroup(controls: any[]): FormGroup {
