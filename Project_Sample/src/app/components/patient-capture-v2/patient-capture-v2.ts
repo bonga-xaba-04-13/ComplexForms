@@ -1,348 +1,213 @@
-import {
-  Component, Inject, OnInit, HostListener, ViewChild, ElementRef
-} from '@angular/core';
+import { Component, OnInit, HostListener, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { JsonFormControl, ControlOption } from '../../models/form-fields';
 import { DynamicForm } from './dynamic-form/dynamic-form';
+import { FormService } from '../../services/form.service';
+import { FormGroupRegistry } from './form-groups/form-group-registry';
+import { PersonalInfoForm } from './form-groups/personal-info-form/personal-info-form';
+import { ContactInfoForm } from './form-groups/contact-info-form/contact-info-form';
+import { InsuranceForm } from './form-groups/insurance-form/insurance-form';
+import { EmergencyContactsForm } from './form-groups/emergency-contacts-form/emergency-contacts-form';
+import { PayloadBuilder } from './payload/payload-builder.service';
+import { StepSnapshot, ParticipantPayload } from './payload/payload.types';
+import { DraftService } from './services/draft.service';
+import { ValidationService } from './services/validation.service';
+import { SubmissionService } from './services/submission.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { Store } from '@ngrx/store';
+import {
+  initializePatientCapture,
+  markStepCompleted,
+  restorePatientCaptureState,
+  setActiveParticipant,
+  setCaptureMode,
+  setCurrentStep,
+  updateCapturedStepData,
+} from '../../store/patient-capture/patient-capture.actions';
+import {
+  AppState,
+  PatientCaptureState,
+} from '../../store/patient-capture/patient-capture.reducer';
+import { selectPatientCaptureState } from '../../store/patient-capture/patient-capture.selectors';
 
-// ── Option lists ─────────────────────────────────────────────────────────────
-
-const OPT = {
-  title: opt(['', 'Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof']),
-  gender: opt(['', 'Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other']),
-  nationality: opt(['', 'South African', 'Zimbabwean', 'Mozambican', 'Malawian', 'Namibian', 'Botswanan', 'Other African', 'Other']),
-  idType: opt(['South African ID', 'Passport', 'Asylum Permit', 'Work Permit']),
-  race: opt(['', 'African / Black', 'Coloured', 'Indian / Asian', 'White', 'Other'], ['Prefer not to say', 'African / Black', 'Coloured', 'Indian / Asian', 'White', 'Other']),
-  language: opt(['', 'isiZulu', 'isiXhosa', 'Afrikaans', 'English', 'Sepedi', 'Setswana', 'Sesotho', 'Xitsonga', 'Tshivenda', 'Other']),
-  marital: [
-    { value: 'single',   label: 'Single' },
-    { value: 'married',  label: 'Married / Partnered' },
-    { value: 'divorced', label: 'Divorced' },
-    { value: 'widowed',  label: 'Widowed' },
-  ] as ControlOption[],
-  contact: opt(['Mobile', 'Email', 'WhatsApp', 'Home Phone']),
-  province: opt(['', 'Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape', 'Limpopo', 'Mpumalanga', 'North West', 'Free State', 'Northern Cape']),
-  country: opt(['South Africa', 'Zimbabwe', 'Mozambique', 'Other']),
-  yesNo: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] as ControlOption[],
-  frequency: opt(['', 'Once daily', 'Twice daily', 'Three times daily', 'As needed', 'Weekly', 'Monthly']),
-  smoke: opt(['', 'Never', 'Former', 'Occasional', 'Daily']),
-  alcohol: opt(['', 'Never', 'Rarely', 'Social', 'Moderate', 'Heavy']),
-  exercise: opt(['', 'None', '1-2x per week', '3-4x per week', 'Daily']),
-  diet: opt(['', 'Omnivore', 'Vegetarian', 'Vegan', 'Halaal', 'Kosher', 'Other']),
-  housing: opt(['', 'Own Home', 'Renting', 'Family', 'Government', 'Other']),
-  income: opt(['', 'No income', 'R0–R10 000', 'R10 000–R25 000', 'R25 000–R50 000', 'R50 000+', 'Prefer not to say']),
-  billing: opt(['', 'Medical Aid', 'Cash', 'Credit Card', 'EFT', 'Company Account']),
-  relationship: opt(['', 'Spouse', 'Parent', 'Sibling', 'Child', 'Friend', 'Other']),
-};
-
-function opt(values: string[], labels?: string[]): ControlOption[] {
-  return values.map((v, i) => ({ value: v, label: (labels ?? values)[i] || 'Select' }));
-}
-
-// ── Combobox option lists ─────────────────────────────────────────────────────
-
-const NATIONALITY_OPTS: ControlOption[] = [
-  'South African', 'Zimbabwean', 'Mozambican', 'Malawian', 'Namibian', 'Botswanan',
-  'Zambian', 'Angolan', 'Congolese (DRC)', 'Kenyan', 'Nigerian', 'Ghanaian',
-  'Ethiopian', 'Lesothan', 'Swazi', 'Rwandan', 'Ugandan', 'Tanzanian',
-  'Indian', 'Pakistani', 'Chinese', 'British', 'American', 'German', 'French',
-  'Portuguese', 'Dutch', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const LANGUAGE_OPTS: ControlOption[] = [
-  'isiZulu', 'isiXhosa', 'Afrikaans', 'English', 'Sepedi / Sesotho sa Leboa',
-  'Setswana', 'Sesotho', 'Xitsonga', 'siSwati', 'Tshivenda', 'isiNdebele',
-  'French', 'Portuguese', 'Hindi', 'Mandarin / Chinese', 'Arabic', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const CITY_OPTS: ControlOption[] = [
-  'Johannesburg', 'Cape Town', 'Durban', 'Pretoria / Tshwane', 'Port Elizabeth (Gqeberha)',
-  'Bloemfontein', 'East London', 'Nelspruit (Mbombela)', 'Polokwane', 'Kimberley',
-  'Pietermaritzburg', 'Rustenburg', 'George', 'Witbank (eMalahleni)', 'Ekurhuleni',
-  'Soweto', 'Sandton', 'Benoni', 'Boksburg', 'Germiston', 'Springs', 'Midrand',
-  'Centurion', 'Roodepoort', 'Vereeniging', 'Vanderbijlpark', 'Klerksdorp',
-  'Mahikeng', 'Tzaneen', 'Richards Bay', 'Umtata (Mthatha)', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const MEDICATION_OPTS: ControlOption[] = [
-  'Panado', 'Disprin', 'Voltaren', 'Mybulen', 'Grandpa Headache Powder', 'Corenza-C',
-  'Allergex', 'Cetirizine (Zyrtec)', 'Loratadine (Clarityne)', 'Amoxicillin', 'Augmentin',
-  'Metformin', 'Glucophage', 'Amlodipine', 'Lisinopril', 'Atorvastatin', 'Rosuvastatin',
-  'Omeprazole', 'Lansoprazole', 'Salbutamol', 'Fluticasone', 'Beclometasone',
-  'Warfarin', 'Aspirin', 'Paracetamol', 'Ibuprofen', 'Diclofenac', 'Codeine',
-  'Metoprolol', 'Atenolol', 'Carvedilol', 'Hydrochlorothiazide', 'Furosemide',
-  'Sertraline', 'Fluoxetine', 'Escitalopram', 'Citalopram', 'Alprazolam',
-  'Methotrexate', 'Prednisolone', 'Dexamethasone', 'Insulin (various)', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const OCCUPATION_OPTS: ControlOption[] = [
-  'Accountant', 'Administrator', 'Analyst', 'Architect', 'Attorney / Lawyer',
-  'Builder / Construction', 'Business Owner', 'Cashier', 'Cleaner / Domestic Worker',
-  'Clerk', 'Designer (Graphic / Interior)', 'Doctor / Physician', 'Driver',
-  'Electrician', 'Engineer', 'Farmer', 'Firefighter', 'Government Employee',
-  'Hairdresser / Beautician', 'IT Specialist', 'Journalist', 'Manager',
-  'Mechanic', 'Nurse / Healthcare Worker', 'Pharmacist', 'Plumber', 'Police Officer',
-  'Receptionist', 'Retail Worker', 'Sales Representative', 'Social Worker',
-  'Student', 'Teacher / Educator', 'Technician', 'Unemployed', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const SCHEME_OPTS: ControlOption[] = [
-  'Discovery Health', 'Medihelp', 'Bonitas', 'Momentum Health', 'Fedhealth',
-  'Bestmed', 'Hosmed', 'LA Health', 'Polmed', 'Profmed', 'Sizwe',
-  'Remedi', 'KeyHealth', 'CompCare',
-  'Government Employees Medical Scheme (GEMS)', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const RELATIONSHIP_OPTS: ControlOption[] = [
-  'Spouse', 'Partner / Life Partner', 'Parent', 'Mother', 'Father',
-  'Sibling', 'Brother', 'Sister', 'Child', 'Son', 'Daughter',
-  'Friend', 'Colleague', 'Grandparent', 'Grandmother', 'Grandfather',
-  'Aunt', 'Uncle', 'Cousin', 'Step-parent', 'Step-sibling', 'Guardian', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const CONDITIONS_OPTS: ControlOption[] = [
-  'Diabetes', 'Hypertension', 'Asthma', 'Heart Disease', 'Cancer',
-  'HIV/AIDS', 'Arthritis', 'Depression / Anxiety', 'Epilepsy', 'TB', 'Thyroid Disorder', 'Other',
-].map(v => ({ value: v, label: v }));
-
-const ALLERGY_OPTS: ControlOption[] = [
-  'Penicillin', 'Sulfa drugs', 'NSAIDs', 'Aspirin', 'Latex', 'Pollen', 'Nuts', 'Shellfish', 'None',
-].map(v => ({ value: v, label: v }));
-
-const FAMILY_OPTS: ControlOption[] = [
-  'Diabetes', 'Heart Disease', 'Cancer', 'Hypertension', 'Mental Illness', 'None',
-].map(v => ({ value: v, label: v }));
-
-const VACCINATION_OPTS: ControlOption[] = [
-  'COVID-19', 'Flu Shot', 'Hepatitis B', 'Tetanus', 'Measles / MMR', 'HPV',
-].map(v => ({ value: v, label: v }));
-
-// ── Step definition ───────────────────────────────────────────────────────────
-
-export interface StepDef {
-  id: string;
-  label: string;
-  description: string;
-  patientControls: JsonFormControl[];
-  partnerControls: JsonFormControl[];
-}
-
-function ctrl(
-  name: string, label: string, description: string,
-  type: JsonFormControl['type'],
-  extra: Partial<JsonFormControl> = {}
-): JsonFormControl {
-  return { name, label, description, type, validators: {}, ...extra };
-}
-
-function required(c: JsonFormControl): JsonFormControl {
-  return { ...c, validators: { ...c.validators, required: true } };
-}
-
-// Base personal controls shared between patient and partner (no marital field for partner)
-function personalBase(prefix: string): JsonFormControl[] {
-  return [
-    ctrl(`${prefix}title`,         'Title',                 'Select title',                    'select', { options: OPT.title }),
-    required(ctrl(`${prefix}firstName`,    'First Name',            'e.g. Sipho',                      'text')),
-    ctrl(`${prefix}middleName`,    'Middle Name',           'Optional',                        'text'),
-    required(ctrl(`${prefix}lastName`,     'Last Name / Surname',   'e.g. Dlamini',                    'text')),
-    ctrl(`${prefix}preferredName`, 'Preferred Name',        'If different from first name',     'text'),
-    required(ctrl(`${prefix}dob`,          'Date of Birth',         '',                                'date')),
-    required(ctrl(`${prefix}gender`,       'Gender',                'Select',                          'select', { options: OPT.gender })),
-    ctrl(`${prefix}nationality`,   'Nationality',           'Type to search nationality…',     'combobox', { options: NATIONALITY_OPTS }),
-    ctrl(`${prefix}idType`,        'ID Type',               'Select',                          'select',  { options: OPT.idType }),
-    required(ctrl(`${prefix}idNumber`,     'ID / Passport Number',  '13-digit SA ID or passport',      'text', { span2: true })),
-    ctrl(`${prefix}race`,          'Race / Population Group','Optional — used for equitable health reporting', 'select', { options: OPT.race }),
-    ctrl(`${prefix}language`,      'Home Language',         'Type to search language…',        'combobox', { options: LANGUAGE_OPTS }),
-  ];
-}
-
-function contactBase(prefix: string): JsonFormControl[] {
-  return [
-    required(ctrl(`${prefix}mobile`,          'Mobile Number',          '+27 82 000 0000',             'tel')),
-    ctrl(`${prefix}altPhone`,        'Alternate Phone',        '',                            'tel'),
-    required(ctrl(`${prefix}email`,            'Email Address',          'patient@example.com',         'email')),
-    ctrl(`${prefix}preferredContact`, 'Preferred Contact Method','Select',                   'select', { options: OPT.contact }),
-    required(ctrl(`${prefix}street`,           'Street Address / Unit',  'e.g. 12 Oak Ave, Unit 3B',    'text',   { span2: true })),
-    ctrl(`${prefix}suburb`,          'Suburb / Township',      '',                            'text'),
-    required(ctrl(`${prefix}city`,             'City / Town',            'Type to search city…',        'combobox', { options: CITY_OPTS })),
-    ctrl(`${prefix}province`,        'Province',               'Select',                      'select', { options: OPT.province }),
-    ctrl(`${prefix}postalCode`,      'Postal Code',            '4-digit code',                'text'),
-    ctrl(`${prefix}country`,         'Country',                'Select',                      'select', { options: OPT.country }),
-  ];
-}
-
-function medHistoryControls(prefix: string): JsonFormControl[] {
-  return [
-    ctrl(`${prefix}conditions`,          'Pre-existing Conditions',       'Select all that apply',                    'check', { options: CONDITIONS_OPTS }),
-    ctrl(`${prefix}conditionsOther`,     'Other / Additional Diagnoses',  'List additional conditions or details…',   'textarea'),
-    ctrl(`${prefix}allergies`,           'Known Allergies',               'Select all that apply',                    'check', { options: ALLERGY_OPTS }),
-    ctrl(`${prefix}allergyDescription`,  'Describe Allergic Reactions',   'Reaction type and severity…',              'textarea'),
-    ctrl(`${prefix}familyHistory`,       'Family Medical History',        'Select all that apply',                    'check', { options: FAMILY_OPTS }),
-    ctrl(`${prefix}surgeries`,           'Previous Surgeries / Hospitalisations', 'List with approximate dates…',     'textarea'),
-  ];
-}
-
-function medicationControls(prefix: string): JsonFormControl[] {
-  return [
-    ctrl(`${prefix}onMeds`,             'Currently on Medication?',    'Select',             'radio', { options: OPT.yesNo }),
-    ctrl(`${prefix}medicationName`,     'Medication Name',             'Type to search medication…',  'combobox', { options: MEDICATION_OPTS }),
-    ctrl(`${prefix}dosage`,             'Dosage',                      'e.g. 10 mg',         'text'),
-    ctrl(`${prefix}frequency`,          'Frequency',                   'Select',             'select', { options: OPT.frequency }),
-    ctrl(`${prefix}prescribingDoctor`,  'Prescribing Doctor',          '',                   'text'),
-    ctrl(`${prefix}conditionTreated`,   'Condition Being Treated',     '',                   'text'),
-    ctrl(`${prefix}herbal`,             'Using Herbal / Supplements?', 'Select',             'radio', { options: OPT.yesNo }),
-    ctrl(`${prefix}herbalDescription`,  'Describe Herbal / Supplements','Names and dosages…','textarea'),
-    ctrl(`${prefix}vaccinations`,       'Vaccination History',          'Select all received','check', { options: VACCINATION_OPTS }),
-  ];
-}
-
-function lifestyleControls(prefix: string): JsonFormControl[] {
-  return [
-    ctrl(`${prefix}smoking`,     'Smoking Status',     'Select',  'select', { options: OPT.smoke }),
-    ctrl(`${prefix}alcohol`,     'Alcohol Use',        'Select',  'select', { options: OPT.alcohol }),
-    ctrl(`${prefix}exercise`,    'Exercise Frequency', 'Select',  'select', { options: OPT.exercise }),
-    ctrl(`${prefix}diet`,        'Dietary Preference', 'Select',  'select', { options: OPT.diet }),
-    ctrl(`${prefix}occupation`,  'Occupation',         'Type to search occupation…',  'combobox', { options: OCCUPATION_OPTS }),
-    ctrl(`${prefix}employer`,    'Employer',           '',         'text'),
-    ctrl(`${prefix}housing`,     'Housing Situation',  'Select',  'select', { options: OPT.housing }),
-    ctrl(`${prefix}dependants`,  'Number of Dependants','',        'number'),
-    ctrl(`${prefix}income`,      'Monthly Income Range','Select',  'select', { options: OPT.income }),
-  ];
-}
-
-function insuranceControls(prefix: string): JsonFormControl[] {
-  return [
-    ctrl(`${prefix}hasMedicalAid`,      'Has Medical Aid?',           'Select',             'radio',  { options: OPT.yesNo }),
-    ctrl(`${prefix}scheme`,             'Medical Aid Scheme',         'Type to search scheme…',     'combobox', { options: SCHEME_OPTS }),
-    ctrl(`${prefix}plan`,               'Plan / Option',              '',                   'text'),
-    ctrl(`${prefix}membershipNumber`,   'Membership Number',          '',                   'text'),
-    ctrl(`${prefix}dependantCode`,      'Dependant Code',             '00 for main member', 'text'),
-    ctrl(`${prefix}mainMember`,         'Main Member Name',           '',                   'text'),
-    ctrl(`${prefix}authNumber`,         'Authorisation Number',       '',                   'text'),
-    ctrl(`${prefix}billingMethod`,      'Billing Method',             'Select',             'select', { options: OPT.billing }),
-    ctrl(`${prefix}billingEmail`,       'Billing Email',              '',                   'email', { span2: true }),
-  ];
-}
-
-function emergencyControls(prefix: string): JsonFormControl[] {
-  return [
-    required(ctrl(`${prefix}ec1FullName`,      'Contact 1 — Full Name',    '',               'text')),
-    required(ctrl(`${prefix}ec1Relationship`,  'Relationship',              'Type to search…','combobox', { options: RELATIONSHIP_OPTS })),
-    required(ctrl(`${prefix}ec1Mobile`,        'Mobile Number',             '+27 82 000 0000','tel')),
-    ctrl(`${prefix}ec1Phone`,        'Home Phone',                '',               'tel'),
-    ctrl(`${prefix}ec1Email`,        'Email',                     '',               'email'),
-    ctrl(`${prefix}ec2FullName`,     'Contact 2 — Full Name',    '',               'text'),
-    ctrl(`${prefix}ec2Relationship`, 'Relationship',              'Type to search…','combobox', { options: RELATIONSHIP_OPTS }),
-    ctrl(`${prefix}ec2Mobile`,       'Mobile Number',             '',               'tel'),
-    ctrl(`${prefix}ec2Email`,        'Email',                     '',               'email'),
-  ];
-}
-
-export const STEP_DEFS: StepDef[] = [
-  {
-    id: 'personal',
-    label: 'Personal Information',
-    description: 'Search for an existing patient record to auto-fill, or enter new details below.',
-    patientControls: [
-      ...personalBase('p_'),
-      {
-        name: 'p_maritalStatus',
-        label: 'Marital Status',
-        description: 'Selecting "Married / Partnered" enables the spouse/partner tab throughout all sections.',
-        type: 'radio',
-        validators: { required: true },
-        options: OPT.marital,
-        span2: true,
-      },
-    ],
-    partnerControls: personalBase('s_'),
-  },
-  {
-    id: 'contact',
-    label: 'Contact Details',
-    description: 'Primary contact information, address, and referring practitioner.',
-    patientControls: contactBase('p_'),
-    partnerControls: contactBase('s_'),
-  },
-  {
-    id: 'medical',
-    label: 'Medical History',
-    description: 'Pre-existing conditions, surgical history, allergies, and family background.',
-    patientControls: medHistoryControls('p_'),
-    partnerControls: medHistoryControls('s_'),
-  },
-  {
-    id: 'medications',
-    label: 'Current Medications',
-    description: 'List all current medications, supplements, and vaccination history.',
-    patientControls: medicationControls('p_'),
-    partnerControls: medicationControls('s_'),
-  },
-  {
-    id: 'lifestyle',
-    label: 'Lifestyle & Social',
-    description: 'Lifestyle habits, social context, and occupational details.',
-    patientControls: lifestyleControls('p_'),
-    partnerControls: lifestyleControls('s_'),
-  },
-  {
-    id: 'insurance',
-    label: 'Insurance & Financial',
-    description: 'Medical aid, gap cover, and billing preferences.',
-    patientControls: insuranceControls('p_'),
-    partnerControls: insuranceControls('s_'),
-  },
-  {
-    id: 'emergency',
-    label: 'Emergency Contacts',
-    description: 'Provide at least one emergency contact person.',
-    patientControls: emergencyControls('p_'),
-    partnerControls: emergencyControls('s_'),
-  },
-];
-
-// ── Component ─────────────────────────────────────────────────────────────────
+/** Keys of form steps that should never be rendered (removed during minimization). */
+const EXCLUDED_FORM_KEYNAMES = new Set([
+  'lifestyle_social',
+  'medical_history',
+  'current_medications',
+]);
 
 @Component({
   standalone: true,
   selector: 'app-patient-capture-v2',
-  imports: [CommonModule, DynamicForm],
+  imports: [
+    CommonModule,
+    DynamicForm,
+    PersonalInfoForm,
+    ContactInfoForm,
+    InsuranceForm,
+    EmergencyContactsForm,
+  ],
   templateUrl: './patient-capture-v2.html',
   styleUrl: './patient-capture-v2.scss',
 })
-export class PatientCaptureV2 implements OnInit {
-  readonly STEP_DEFS = STEP_DEFS;
-  readonly TOTAL = STEP_DEFS.length;
+export class PatientCaptureV2 implements OnInit, OnDestroy {
+  LoadedSteps: any[] = [];
+  TOTAL = 0;
 
   currentStep = 0;
-  activeTab: 'patient' | 'partner' = 'patient';
-  showPartnerTab = false;
+  activeParticipant = 0;
+  captureMode: 'individual' | 'joint' = 'individual';
   completedSteps = new Set<number>();
 
-  patientForms: FormGroup[] = [];
-  partnerForms: FormGroup[] = [];
+  /** Form groups per participant index. Index 0 always exists. */
+  participantForms: Record<number, FormGroup[]> = { 0: [] };
 
   toastMsg = '';
   toastVisible = false;
+  errorModalVisible = false;
+  errorModalMessage = '';
 
   @ViewChild('panelsScroll') panelsScroll!: ElementRef<HTMLElement>;
 
+  private destroy$ = new Subject<void>();
+
   constructor(
     private fb: FormBuilder,
+    private formService: FormService,
+    private payloadBuilder: PayloadBuilder,
+    private draftService: DraftService,
+    private validationService: ValidationService,
+    private submissionService: SubmissionService,
     private dialogRef: MatDialogRef<PatientCaptureV2>,
-    @Inject(MAT_DIALOG_DATA) public data: { title?: string }
-  ) {}
-
-  ngOnInit(): void {
-    this.patientForms = STEP_DEFS.map(step => this.buildGroup(step.patientControls));
-    this.partnerForms = STEP_DEFS.map(step => this.buildGroup(step.partnerControls));
+    @Inject(MAT_DIALOG_DATA) public data: { title?: string },
+    private cdr: ChangeDetectorRef,
+    private store: Store<AppState>
+  ) {
+    this.store.select(selectPatientCaptureState)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((state: PatientCaptureState) => this.syncUiStateFromStore(state));
   }
 
-  private buildGroup(controls: JsonFormControl[]): FormGroup {
+  ngOnInit(): void {
+    this.loadFormsFromApi();
+  }
+
+  // ── UI State Sync from Store ────────────────────────────────────────────
+
+  private syncUiStateFromStore(state: PatientCaptureState): void {
+    this.currentStep = state.currentStep;
+    this.activeParticipant = state.activeParticipant;
+    this.captureMode = state.captureMode;
+    this.completedSteps = new Set(state.completedSteps);
+    if (state.totalSteps > 0) {
+      this.TOTAL = state.totalSteps;
+    }
+  }
+
+  /** Restore saved draft if available. */
+  private restoreDraftIfAvailable(): void {
+    const restored = this.draftService.restoreDraft();
+    if (restored) {
+      // Determine capture mode from restored data
+      const hasMultipleParticipants = restored.snapshots.some(s => s.allowDynamicParticipants);
+      this.captureMode = hasMultipleParticipants ? 'joint' : 'individual';
+
+      // If joint, build participant-1 forms before applying data
+      if (this.captureMode === 'joint') {
+        this.buildParticipantFormsForIndex(1);
+      }
+
+      this.applyRestoredData(restored);
+    }
+  }
+
+  private applyRestoredData(restored: any): void {
+    restored.snapshots.forEach((snapshot: StepSnapshot) => {
+      const idx = this.LoadedSteps.findIndex(s => s.keyname === snapshot.stepName || s.formLabel === snapshot.stepLabel);
+      if (idx === -1) return;
+      const stepIdx = Math.max(0, idx);
+
+      Object.entries(snapshot.participants).forEach(([pIdx, values]) => {
+        const numericIdx = Number(pIdx);
+        const forms = this.participantForms[numericIdx]?.[stepIdx];
+        if (forms) {
+          forms.patchValue(values as Record<string, unknown>);
+        }
+      });
+    });
+
+    const restoredStep = Math.min(restored.currentStep, this.TOTAL - 1);
+    this.currentStep = restoredStep;
+    this.completedSteps = new Set(restored.completedSteps ?? []);
+    this.store.dispatch(restorePatientCaptureState({
+      currentStep: restoredStep,
+      activeParticipant: this.activeParticipant,
+      captureMode: this.captureMode,
+      completedSteps: Array.from(this.completedSteps),
+      capturedData: this.toCapturedDataMap(),
+    }));
+    this.showToast('Draft restored', 2500);
+  }
+
+  // ── Load Forms ──────────────────────────────────────────────────────────
+
+  private loadFormsFromApi(): void {
+    this.formService.loadStepperWithSubForms()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          // Filter out excluded form keynames
+          const rawForms = data.forms.filter((f: any) => !EXCLUDED_FORM_KEYNAMES.has(f.keyname));
+          this.initializeLoadedSteps(rawForms);
+          this.restoreDraftIfAvailable();
+        },
+        error: (err) => {
+          console.error('Error loading forms from API:', err);
+          this.showToast('Error loading form definition');
+        }
+      });
+  }
+
+  private initializeLoadedSteps(forms: any[]): void {
+    this.LoadedSteps = [];
+    this.participantForms = {};
+
+    // Always build participant 0 forms
+    this.participantForms[0] = [];
+    forms.forEach((form: any) => {
+      FormGroupRegistry.logFormTypeDetection(form, form.definition);
+      const patientForm = this.buildGroup(form.definition);
+      this.participantForms[0].push(patientForm);
+      this.LoadedSteps.push(form);
+    });
+
+    this.TOTAL = this.LoadedSteps.length;
+
+    this.store.dispatch(initializePatientCapture({
+      totalSteps: this.TOTAL,
+      currentStep: this.currentStep,
+      activeParticipant: this.activeParticipant,
+      captureMode: this.captureMode,
+      completedSteps: Array.from(this.completedSteps),
+      capturedData: this.toCapturedDataMap(),
+    }));
+    this.cdr.markForCheck();
+  }
+
+  /** Build form groups for a given participant index (used when switching to joint mode). */
+  private buildParticipantFormsForIndex(participantIndex: number): void {
+    this.participantForms[participantIndex] = this.LoadedSteps.map(step =>
+      this.buildGroup(step.definition)
+    );
+  }
+
+  private buildGroup(controls: any[]): FormGroup {
     const group: Record<string, any> = {};
+    if (!controls) return this.fb.group(group);
+
     for (const c of controls) {
       const v = c.validators?.['required'] ? [Validators.required] : [];
       group[c.name] = ['', v];
@@ -350,61 +215,163 @@ export class PatientCaptureV2 implements OnInit {
     return this.fb.group(group);
   }
 
-  // ── Computed accessors ──────────────────────────────────────────────────────
+  // ── Computed Accessors ──────────────────────────────────────────────────
 
-  get currentStepDef(): StepDef {
-    return STEP_DEFS[this.currentStep];
+  get currentStepDef(): any {
+    return this.LoadedSteps[this.currentStep];
   }
 
-  get activeControls(): JsonFormControl[] {
-    return this.activeTab === 'partner'
-      ? this.currentStepDef.partnerControls
-      : this.currentStepDef.patientControls;
+  get activeControls(): any[] {
+    return this.currentStepDef?.definition || [];
   }
 
+  /** The FormGroup array for the currently active participant. */
+  get activeParticipantForms(): FormGroup[] {
+    return this.participantForms[this.activeParticipant] ?? [];
+  }
+
+  /** The FormGroup for the current step and active participant. */
   get activeFormGroup(): FormGroup {
-    return this.activeTab === 'partner'
-      ? this.partnerForms[this.currentStep]
-      : this.patientForms[this.currentStep];
+    return this.activeParticipantForms[this.currentStep] ?? this.fb.group({});
+  }
+
+  /** Available participant indexes — [0] in individual mode, [0,1] in joint mode. */
+  get participantIndexes(): number[] {
+    return this.captureMode === 'joint' ? [0, 1] : [0];
+  }
+
+  /** Whether joint mode is enabled. */
+  get isJointMode(): boolean {
+    return this.captureMode === 'joint';
   }
 
   get progressPercent(): number {
-    return Math.round(((this.currentStep + 1) / this.TOTAL) * 100);
+    return this.TOTAL === 0 ? 0 : Math.round(((this.currentStep + 1) / this.TOTAL) * 100);
   }
 
   get isFirstStep(): boolean { return this.currentStep === 0; }
   get isLastStep(): boolean  { return this.currentStep === this.TOTAL - 1; }
 
-  get partnerProgress(): string {
-    const filled = this.partnerForms.filter(f => f.dirty).length;
+  /** Progress badge for a participant tab. */
+  getParticipantProgress(participantIndex: number): string {
+    const forms = this.participantForms[participantIndex];
+    if (!forms) return 'Not started';
+    const filled = forms.filter(f => f.dirty).length;
     return filled === 0 ? 'Not started' : `${filled} / ${this.TOTAL} steps`;
   }
 
-  // ── Navigation ──────────────────────────────────────────────────────────────
+  /** Detect which child form component should render this step. */
+  getFormGroupType(formDef: any): string {
+    if (!formDef) return 'unknown';
+    const detection = FormGroupRegistry.identifyFormType(formDef.definition);
+    return detection.type;
+  }
+
+  // ── Capture Mode ────────────────────────────────────────────────────────
+
+  /** Toggle between individual and joint capture mode. */
+  setCaptureMode(mode: 'individual' | 'joint'): void {
+    this.captureMode = mode;
+    this.activeParticipant = 0;
+    this.store.dispatch(setCaptureMode({ captureMode: mode }));
+
+    if (mode === 'joint') {
+      // Build participant 1 forms on demand
+      if (!this.participantForms[1]) {
+        this.buildParticipantFormsForIndex(1);
+      }
+      this.showToast('Joint mode enabled — fill forms for each participant', 3500);
+    } else {
+      // Clear participant 1 forms when switching back to individual
+      delete this.participantForms[1];
+      this.showToast('Switched to individual capture', 2500);
+    }
+  }
+
+  // ── Participant Switching ───────────────────────────────────────────────
+
+  switchParticipant(index: number): void {
+    this.activeParticipant = index;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: index }));
+    this.scrollTop();
+  }
+
+  // ── Navigation ──────────────────────────────────────────────────────────
 
   goToStep(index: number): void {
     this.currentStep = index;
-    this.activeTab = 'patient';
+    this.activeParticipant = 0;
+    this.store.dispatch(setCurrentStep({ currentStep: index }));
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
     this.scrollTop();
   }
 
   next(): void {
     if (this.isLastStep) return;
     this.completedSteps = new Set([...this.completedSteps, this.currentStep]);
+    this.store.dispatch(markStepCompleted({ stepIndex: this.currentStep }));
     this.currentStep++;
-    this.activeTab = 'patient';
+    this.store.dispatch(setCurrentStep({ currentStep: this.currentStep }));
+    this.activeParticipant = 0;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
+    this.scrollTop();
+  }
+
+  nextStepWithValidation(): void {
+    if (this.isLastStep) return;
+
+    const formLabels = this.LoadedSteps.map(s => s.formLabel || 'Unknown');
+
+    // Validate current step for active participant
+    const participantForms = this.participantForms[this.activeParticipant];
+    if (!participantForms?.[this.currentStep]) {
+      this.next();
+      return;
+    }
+
+    const currentValidation = this.validationService.validateCurrentStep(
+      participantForms[this.currentStep],
+      this.currentStep,
+      formLabels[this.currentStep] || 'Unknown',
+      this.activeParticipant
+    );
+
+    if (!currentValidation.isValid) {
+      this.showErrorModal(
+        `Step ${this.currentStep + 1} has errors:\n\n${this.validationService.formatErrorsForDisplay(currentValidation.errors)}\n\nPlease fix these issues before proceeding.`
+      );
+      participantForms[this.currentStep].markAllAsTouched();
+      return;
+    }
+
+    // Allow user to continue despite prior step warnings
+    const priorStepsValidation = this.validationService.validateParticipantForms(
+      participantForms,
+      formLabels,
+      this.activeParticipant,
+      this.currentStep - 1
+    );
+
+    if (!priorStepsValidation.isValid) {
+      const firstInvalid = priorStepsValidation.firstInvalidStepIndex ?? this.currentStep;
+      this.showToast(`⚠️ Step ${firstInvalid + 1} has incomplete fields. Continue anyway?`, 5000);
+    }
+
+    this.completedSteps = new Set([...this.completedSteps, this.currentStep]);
+    this.store.dispatch(markStepCompleted({ stepIndex: this.currentStep }));
+    this.currentStep++;
+    this.store.dispatch(setCurrentStep({ currentStep: this.currentStep }));
+    this.activeParticipant = 0;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
     this.scrollTop();
   }
 
   previous(): void {
     if (this.isFirstStep) return;
     this.currentStep--;
-    this.activeTab = 'patient';
-    this.scrollTop();
-  }
-
-  switchTab(tab: 'patient' | 'partner'): void {
-    this.activeTab = tab;
+    this.store.dispatch(setCurrentStep({ currentStep: this.currentStep }));
+    this.activeParticipant = 0;
+    this.store.dispatch(setActiveParticipant({ activeParticipant: 0 }));
     this.scrollTop();
   }
 
@@ -412,38 +379,192 @@ export class PatientCaptureV2 implements OnInit {
     this.panelsScroll?.nativeElement?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ── Marital status ──────────────────────────────────────────────────────────
+  // ── Field Changes ───────────────────────────────────────────────────────
 
-  onMaritalChange(status: string): void {
-    if (status === 'married') {
-      this.showPartnerTab = true;
-      this.showToast('Spouse / Partner tab enabled — switch tabs to capture their details', 3500);
-    } else {
-      this.showPartnerTab = false;
-      this.activeTab = 'patient';
+  onFieldChanged(_event: { fieldName: string; value: any }): void {
+    const stepIndex = this.currentStep;
+    const allParticipants: Record<number, Record<string, unknown>> = {};
+
+    this.participantIndexes.forEach(idx => {
+      allParticipants[idx] = this.participantForms[idx]?.[stepIndex]?.value ?? {};
+    });
+
+    this.store.dispatch(updateCapturedStepData({
+      stepIndex,
+      participants: allParticipants,
+      allowDynamicParticipants: this.isJointMode,
+      stepName: this.currentStepDef?.keyname || `step_${stepIndex}`,
+      stepLabel: this.currentStepDef?.formLabel || `Step ${stepIndex + 1}`,
+      isComplete: this.isCurrentStepComplete(stepIndex),
+    }));
+  }
+
+  // ── Actions ─────────────────────────────────────────────────────────────
+
+  saveDraft(): void {
+    try {
+      const snapshots = this.toStepSnapshots();
+      this.draftService.saveDraft(snapshots, this.captureMode, this.buildDraftMetadata());
+      this.showToast('Draft saved successfully', 2500);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.showToast(`Failed to save draft: ${errorMsg}`, 3500);
+      console.error('Draft save failed:', error);
     }
   }
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
-
-  saveDraft(): void {
-    this.showToast('Draft saved successfully');
+  saveSimpleDraft(): void {
+    try {
+      const snapshots = this.toStepSnapshots();
+      this.draftService.saveSimpleDraft(snapshots, this.captureMode);
+      this.showToast('Draft saved', 2000);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.showToast(`Failed to save draft: ${errorMsg}`, 3500);
+      console.error('Draft save failed:', error);
+    }
   }
 
+  /** Convert internal form state to StepSnapshot array for payload building. */
+  private toStepSnapshots(): StepSnapshot[] {
+    return this.LoadedSteps.map((step, index) => ({
+      stepName: step.keyname || `step_${index}`,
+      stepLabel: step.formLabel,
+      allowDynamicParticipants: this.isJointMode,
+      participants: this.participantIndexes.reduce((acc, idx) => {
+        acc[idx] = this.participantForms[idx]?.[index]?.value || {};
+        return acc;
+      }, {} as Record<number, Record<string, unknown>>)
+    }));
+  }
+
+  private toCapturedDataMap(): Record<number, {
+    participants: Record<number, Record<string, unknown>>;
+    allowDynamicParticipants: boolean;
+    stepName?: string;
+    stepLabel?: string;
+    isComplete?: boolean;
+  }> {
+    return this.LoadedSteps.reduce((acc, step, index) => {
+      const participants: Record<number, Record<string, unknown>> = {};
+      this.participantIndexes.forEach(idx => {
+        participants[idx] = this.participantForms[idx]?.[index]?.value ?? {};
+      });
+      acc[index] = {
+        participants,
+        allowDynamicParticipants: !!step.allowDynamicParticipants || this.isJointMode,
+        stepName: step.keyname || `step_${index}`,
+        stepLabel: step.formLabel || `Step ${index + 1}`,
+        isComplete: this.isCurrentStepComplete(index),
+      };
+      return acc;
+    }, {} as Record<number, { participants: Record<number, Record<string, unknown>>; allowDynamicParticipants: boolean; stepName?: string; stepLabel?: string; isComplete?: boolean; }>);
+  }
+
+  private isCurrentStepComplete(stepIndex: number): boolean {
+    let hasAnyData = false;
+    this.participantIndexes.forEach(idx => {
+      const values = this.participantForms[idx]?.[stepIndex]?.value ?? {};
+      if (Object.values(values).some(v => v !== null && v !== undefined && v !== '')) {
+        hasAnyData = true;
+      }
+    });
+    return hasAnyData;
+  }
+
+  private buildDraftMetadata() {
+    return {
+      currentStep: this.currentStep,
+      completedSteps: Array.from(this.completedSteps),
+      totalSteps: this.TOTAL,
+    };
+  }
+
+  /** Submit the entire form — validate, POST via HTTP, close dialog on success. */
   submitForm(): void {
-    const allValid = this.patientForms.every(f => f.valid);
+    // Validate participant 0 fully
+    const p0Forms = this.participantForms[0];
+    const allValid = p0Forms.every(f => f.valid);
     if (!allValid) {
-      this.patientForms.forEach(f => f.markAllAsTouched());
+      p0Forms.forEach(f => f.markAllAsTouched());
       this.showToast('Please complete all required fields');
       return;
     }
-    const payload = {
-      patient: this.patientForms.map(f => f.value),
-      partner: this.showPartnerTab ? this.partnerForms.map(f => f.value) : null,
-    };
-    console.log('PatientCaptureV2 submitted:', payload);
-    this.showToast('Patient record submitted successfully!');
-    setTimeout(() => this.dialogRef.close(payload), 1200);
+
+    // In joint mode also validate participant 1 (skip empty stubs)
+    if (this.isJointMode && this.participantForms[1]) {
+      const p1Forms = this.participantForms[1];
+      const p1Invalid = p1Forms.some(f => {
+        if (Object.keys(f.value).every(k => !f.value[k])) return false; // skip empty stubs
+        return !f.valid;
+      });
+      if (p1Invalid) {
+        p1Forms.forEach(f => f.markAllAsTouched());
+        this.showToast('Please complete partner form fields');
+        return;
+      }
+    }
+
+    // Build payloads
+    const snapshots = this.toStepSnapshots();
+    const formatA = this.payloadBuilder.buildStepGroupedPayload(snapshots);
+    const formatB: ParticipantPayload = this.payloadBuilder.buildParticipantPayload(snapshots);
+
+    console.log('Submitting patient intake...', { backend: formatA, audit: formatB });
+
+    // Demo POST via SubmissionService (logs body to console automatically)
+    this.submissionService.submitIntake({ backend: formatA, audit: formatB }).subscribe({
+      next: () => {
+        this.showToast('Patient record submitted successfully!');
+        setTimeout(() => this.dialogRef.close({ backend: formatA, audit: formatB }), 1200);
+      },
+      error: (err) => {
+        // Even on network failure, the payload was logged by SubmissionService
+        console.warn('POST failed (endpoint may not exist locally):', err);
+        this.showToast('Submission failed — payload was logged to Console for inspection', 5000);
+        // Close anyway so user can see result in dev
+        setTimeout(() => this.dialogRef.close({ backend: formatA, audit: formatB }), 1500);
+      }
+    });
+  }
+
+  /** Enhanced submit with detailed validation feedback before POST. */
+  submitFormWithFeedback(): void {
+    const formLabels = this.LoadedSteps.map(s => s.formLabel || 'Unknown');
+
+    // Validate participant 0
+    const p0Validation = this.validationService.validateParticipantForms(
+      this.participantForms[0] ?? [],
+      formLabels,
+      0
+    );
+
+    if (!p0Validation.isValid) {
+      this.participantForms[0].forEach(f => f.markAllAsTouched());
+      this.showErrorModal(
+        `Please fix the following errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(p0Validation.errors)}`
+      );
+      return;
+    }
+
+    // Validate participant 1 if joint mode
+    if (this.isJointMode && this.participantForms[1]) {
+      const p1Validation = this.validationService.validateParticipantForms(
+        this.participantForms[1],
+        formLabels,
+        1
+      );
+      if (p1Validation.errors.length > 0) {
+        this.participantForms[1].forEach(f => f.markAllAsTouched());
+        this.showErrorModal(
+          `Please fix partner form errors before submitting:\n\n${this.validationService.formatErrorsForDisplay(p1Validation.errors)}`
+        );
+        return;
+      }
+    }
+
+    // All valid — submit via HTTP
+    this.submitForm();
   }
 
   close(): void {
@@ -453,9 +574,28 @@ export class PatientCaptureV2 implements OnInit {
   showToast(msg: string, ms = 2800): void {
     this.toastMsg = msg;
     this.toastVisible = true;
-    setTimeout(() => (this.toastVisible = false), ms);
+    setTimeout(() => { this.toastVisible = false }, ms);
+  }
+
+  showErrorModal(message: string): void {
+    this.errorModalMessage = message;
+    this.errorModalVisible = true;
+  }
+
+  closeErrorModal(): void {
+    this.errorModalVisible = false;
+  }
+
+  goToStepFromError(stepIndex: number): void {
+    this.goToStep(stepIndex);
+    this.closeErrorModal();
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void { this.close(); }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }

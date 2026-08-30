@@ -6,9 +6,9 @@
       <div>
         <div class="auto__header-title">Patient Intake Registration</div>
         <div class="auto__header-sub">
-          Step {{ currentStep + 1 }} of {{ TOTAL }} — {{ currentStepDef.label }}
-          @if (showPartnerTab) {
-            <span class="auto__header-badge">&#9679; Married capture</span>
+          Step {{ currentStep + 1 }} of {{ TOTAL }} — {{ currentStepDef?.formLabel || 'Loading...' }}
+          @if (isJointMode) {
+            <span class="auto__header-badge">&#9679; Joint capture — {{ participantIndexes.length }} participants</span>
           }
         </div>
       </div>
@@ -20,7 +20,7 @@
       <div class="auto__progress-bar-fill" [style.width.%]="progressPercent"></div>
     </div>
     <div class="auto__progress-meta">
-      <span class="auto__progress-label">{{ currentStepDef.label }}</span>
+      <span class="auto__progress-label">{{ currentStepDef?.formLabel || 'Loading...' }}</span>
       <span class="auto__progress-pct">{{ progressPercent }}%</span>
     </div>
   </div>
@@ -32,14 +32,14 @@
     <nav class="auto__sidebar" aria-label="Form sections">
       <div class="auto__sidebar-heading">Sections</div>
 
-      @for (step of STEP_DEFS; track step.id; let i = $index) {
+      @for (step of LoadedSteps; track $index; let i = $index) {
         <button
           class="auto__step-btn"
           [class.auto__step-active]="i === currentStep"
           [class.auto__step-complete]="completedSteps.has(i)"
           (click)="goToStep(i)">
           <span class="auto__step-num">{{ i + 1 }}</span>
-          <span class="auto__step-label">{{ step.label }}</span>
+          <span class="auto__step-label">{{ step.formLabel }}</span>
           @if (completedSteps.has(i)) {
             <span class="auto__step-status">&#10003;</span>
           }
@@ -50,58 +50,118 @@
     <!-- MAIN (tab bar + scrollable stage) -->
     <div class="auto__main">
 
+      <!-- ── Capture Mode Toggle (first step only) ─────────────────────── -->
+      @if (isFirstStep && captureMode !== null) {
+        <div class="capture-mode-toggle">
+          <label class="capture-mode-label">Capture Mode:</label>
+          <button
+            class="cmode-btn"
+            [class.cmode-btn--active]="captureMode === 'individual'"
+            (click)="setCaptureMode('individual')">
+            Individual
+          </button>
+          <button
+            class="cmode-btn"
+            [class.cmode-btn--active]="captureMode === 'joint'"
+            (click)="setCaptureMode('joint')">
+            Joint
+          </button>
+        </div>
+      }
+
       <!-- ── Participant tab bar ─────────────────────────────────────────── -->
-      <!-- Appears on ALL steps once "Married / Partnered" is selected.      -->
-      <!-- Lets the capturer switch between Patient and Spouse/Partner data.  -->
-      <div class="auto__tab-bar" [class.auto__visible]="showPartnerTab">
+      <!-- Visible whenever joint mode is active.                        -->
+      <!-- Lets the capturer switch between participants' data.         -->
+      <div class="auto__tab-bar" [class.auto__visible]="isJointMode">
+        @for (idx of participantIndexes; track idx) {
+          <button
+            class="auto__tab-btn"
+            [class.auto__tab-active]="activeParticipant === idx"
+            (click)="switchParticipant(idx)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="7" r="4"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            </svg>
+            Participant {{ idx + 1 }}
+            @if (activeParticipant === idx) {
+              <span class="auto__tab-badge auto__tab-badge--p1">Active</span>
+            } @else {
+              <span class="auto__tab-badge">{{ getParticipantProgress(idx) }}</span>
+            }
+          </button>
+        }
 
-        <button
-          class="auto__tab-btn"
-          [class.auto__tab-active]="activeTab === 'patient'"
-          (click)="switchTab('patient')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="7" r="4"/>
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          </svg>
-          Participant 1 — Patient
-          <span class="auto__tab-badge auto__tab-badge--p1">Active</span>
-        </button>
-
-        <button
-          class="auto__tab-btn"
-          [class.auto__tab-active]="activeTab === 'partner'"
-          (click)="switchTab('partner')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="7" r="4"/>
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          </svg>
-          Participant 2 — Spouse / Partner
-          <span class="auto__tab-badge">{{ partnerProgress }}</span>
-        </button>
-
-        <!-- Contextual hint shown inside the tab bar -->
         <span class="auto__tab-hint">
           Switch tabs to capture details for each participant separately
         </span>
-
       </div>
 
       <!-- ── STAGE ───────────────────────────────────────────────────────── -->
-      <!-- The child DynamicForm renders the correct fields for the active    -->
-      <!-- step + active tab combination. Same 7 steps, two participants.    -->
       <div class="auto__form-panels" #panelsScroll>
 
-        <app-dynamic-form
-          [controls]="activeControls"
-          [formGroup]="activeFormGroup"
-          [stepLabel]="currentStepDef.label"
-          [stepDescription]="currentStepDef.description"
-          [isPartner]="activeTab === 'partner'"
-          [isEditing]="true"
-          (maritalChanged)="onMaritalChange($event)">
-        </app-dynamic-form>
+        @switch (getFormGroupType(currentStepDef)) {
+          <!-- Personal Information -->
+          @case ('personal') {
+            <app-personal-info-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [participantIndex]="activeParticipant"
+              [isEditing]="true"
+              (fieldChanged)="onFieldChanged($event)">
+            </app-personal-info-form>
+          }
+
+          <!-- Contact Details -->
+          @case ('contact') {
+            <app-contact-info-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [participantIndex]="activeParticipant"
+              [isEditing]="true">
+            </app-contact-info-form>
+          }
+
+          <!-- Insurance & Financial -->
+          @case ('insurance') {
+            <app-insurance-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [participantIndex]="activeParticipant"
+              [isEditing]="true">
+            </app-insurance-form>
+          }
+
+          <!-- Emergency Contacts -->
+          @case ('emergency') {
+            <app-emergency-contacts-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [participantIndex]="activeParticipant"
+              [isEditing]="true">
+            </app-emergency-contacts-form>
+          }
+
+          <!-- Fallback to generic for unknown types -->
+          @default {
+            <app-dynamic-form
+              [controls]="activeControls"
+              [formGroup]="activeFormGroup"
+              [stepLabel]="currentStepDef?.formLabel || ''"
+              [stepDescription]="currentStepDef?.formDescription || ''"
+              [participantIndex]="activeParticipant"
+              [isEditing]="true">
+            </app-dynamic-form>
+          }
+        }
 
       </div>
 
@@ -113,6 +173,9 @@
     <div class="auto__footer-left">
       <button class="auto__btn auto__btn-ghost" (click)="saveDraft()">
         &#128190; Save Draft
+      </button>
+      <button class="auto__btn auto__btn-ghost" (click)="saveSimpleDraft()">
+        &#128190; Save Simple Draft
       </button>
     </div>
     <div class="auto__footer-right">
@@ -126,17 +189,37 @@
         &#8592; Previous
       </button>
       @if (!isLastStep) {
-        <button class="auto__btn auto__btn-primary" (click)="next()">
+        <button class="auto__btn auto__btn-primary" (click)="nextStepWithValidation()">
           Next &#8594;
         </button>
       } @else {
-        <button class="auto__btn auto__btn-success" (click)="submitForm()">
+        <button class="auto__btn auto__btn-success" (click)="submitFormWithFeedback()">
           &#10003; Submit
         </button>
       }
       <button class="auto__btn auto__btn-ghost" (click)="close()">&#10005; Close</button>
     </div>
   </div>
+
+  <!-- Error Modal -->
+  @if (errorModalVisible) {
+    <div class="auto__modal-overlay" (click)="closeErrorModal()">
+      <div class="auto__modal" (click)="$event.stopPropagation()">
+        <div class="auto__modal-header">
+          <h3>⚠️ Validation Errors</h3>
+          <button class="auto__modal-close" (click)="closeErrorModal()">&times;</button>
+        </div>
+        <div class="auto__modal-body">
+          <pre>{{ errorModalMessage }}</pre>
+        </div>
+        <div class="auto__modal-footer">
+          <button class="auto__btn auto__btn-primary" (click)="closeErrorModal()">
+            Understood, Fix Errors
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Toast notification -->
   <div class="auto__toast" [class.auto__toast-show]="toastVisible">{{ toastMsg }}</div>
